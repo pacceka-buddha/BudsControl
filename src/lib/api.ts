@@ -1,7 +1,7 @@
 // Typed wrappers around the Tauri commands (src-tauri/src/commands.rs). Argument names are camelCase
 // here; Tauri maps them to the snake_case Rust parameters.
 
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from './tauri'
 import type { AncLevel } from './bindings/AncLevel'
 import type { EarSide } from './bindings/EarSide'
 import type { Gesture } from './bindings/Gesture'

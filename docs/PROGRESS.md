@@ -150,3 +150,38 @@ Notes and deviations:
 - `channel` is `null` in the snapshot on Windows: `getpeername` does not return the SDP-resolved RFCOMM channel.
   Cosmetic (Developer tab); investigate in Phase 9 together with `budsctl sdp`.
 - `BUDS_FAKE=1` runs the app against the simulated buds; settings and log are then in memory only.
+
+## Phase 5: flyout UI
+
+Done, with the limits listed below. Gate 5 evidence:
+
+- `npm run check` 0 errors, `npm test` (8 tests for the formatting / geometry helpers), `npm run build`, clippy and all
+  Rust tests clean.
+- Built: tokens (light/dark from `prefers-color-scheme`, Windows accent applied at runtime), `Segmented` (sliding
+  accent pill that follows animated widths; radio-group keyboard model), `BatteryRing`, `EarbudsGlyph`, `Icon`
+  (own line icons), `Card`, `Row`, `ToggleSwitch`, `PickerButton` + native menus (`menu.ts`), `Button`, `Spinner`,
+  `BandSlider` / `EqBands` (pointer + keyboard, sent on release), and the flyout sections: header, modes, ANC
+  levels, battery row, More panel (EQ buttons or menu, custom EQ, low latency, find, gestures), disconnected /
+  connecting panel. The window follows the content height (opening grows it first, closing shrinks it after).
+- Visual review in every state with the browser simulator (`src/lib/mock.ts`), light and dark: connected, ANC with
+  levels, custom EQ, disconnected, connecting, low battery (red), charging (green bolts), long EQ names (menu).
+  Screenshots: `docs/screenshots/`.
+- Interaction checks in the simulator: radio keyboard model (roving tab stop, arrows), level row appears only in
+  ANC, switch, reported window height equals the content height.
+- **Real window + real Buds 4 (driven through the UI):** collapsed and expanded flyout with Acrylic over a changing
+  wallpaper (stays readable), ANC with the last-used level, level change, More panel, EQ preset menu (native
+  Windows menu with a check mark, flyout stays open behind it), Custom1 sliders (drag the 1 kHz band to +3, reset
+  to 0), low latency on/off, gesture menu (Next track, restored), Transparency, header "..." menu, Settings opens
+  the settings window and closes the flyout. The buds were returned to their original settings.
+
+Deviations and limits:
+- Icons are drawn for this app instead of Fluent UI System Icons (their path data can't be reproduced reliably
+  from memory); the Fluent entry was removed from THIRD_PARTY_NOTICES.
+- The window is the flyout (translucent surface over Acrylic, DWM rounds the corners) instead of a card inside a
+  transparent window, so a resizing window never shows a mismatched strip.
+- Not verified: 150% / 200% display scaling, the light theme in the real window (the PC is on dark; light was
+  reviewed in the browser simulator), taskbar on other edges, find-my-earbuds (loud, deliberately not played),
+  a second monitor.
+- While the app runs, `budsctl` can't talk to the buds (one control connection): Phase 9 adds the IPC.
+- Launching a second instance can show the flyout and have it hide again at once (the launching process takes the
+  focus); a tray click is the normal path.

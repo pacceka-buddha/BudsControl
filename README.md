@@ -24,6 +24,11 @@ cargo build --workspace
 npm run tauri dev      # opens the app (BUDS_FAKE=1 will use simulated buds from Phase 2)
 ```
 
+Design review without the app or the buds: `npm run dev`, then open
+`http://localhost:1420/flyout.html?scenario=<name>&more=1` in a browser (scenarios: connected, anc, customeq,
+disconnected, connecting, lowbattery, charging, finding, longeq, minimal, noanc). A built-in simulator answers the
+app's commands there. `npm test` runs the frontend unit tests.
+
 The original macOS app is cloned to `reference/upstream/` (gitignored) at commit `298d452` for porting.
 
 ## Credits

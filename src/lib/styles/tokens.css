@@ -1,0 +1,64 @@
+/* Design tokens: Windows 11 (Fluent) look, light and dark from the OS via prefers-color-scheme.
+   --accent / --on-accent are overwritten at runtime with the user's Windows accent colour (theme.ts). */
+:root {
+  --font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Cantarell, sans-serif;
+  --font-mono: 'Cascadia Mono', Consolas, ui-monospace, monospace;
+
+  --accent: #0067c0;
+  --on-accent: #ffffff;
+  --danger: #c42b1c;
+  --success: #0f7b0f;
+
+  /* The page background is a translucent layer over the window's Acrylic effect. */
+  --surface: rgba(243, 243, 243, 0.78);
+  --surface-solid: #f3f3f3;
+  --text: rgba(0, 0, 0, 0.9);
+  --text-2: rgba(0, 0, 0, 0.62);
+  --text-3: rgba(0, 0, 0, 0.45);
+  --fill: rgba(0, 0, 0, 0.04);
+  --fill-hover: rgba(0, 0, 0, 0.07);
+  --fill-press: rgba(0, 0, 0, 0.1);
+  --card: rgba(255, 255, 255, 0.6);
+  --stroke: rgba(0, 0, 0, 0.07);
+  --stroke-strong: rgba(0, 0, 0, 0.16);
+  --track: rgba(0, 0, 0, 0.06);
+  --knob: #ffffff;
+  --shadow-knob: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+  --radius-card: 8px;
+  --radius-control: 4px;
+  --radius-pill: 999px;
+  --pad: 12px;
+  --gap: 10px;
+
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur: 220ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --danger: #ff99a4;
+    --success: #6ccb5f;
+    --surface: rgba(32, 32, 32, 0.78);
+    --surface-solid: #202020;
+    --text: #ffffff;
+    --text-2: rgba(255, 255, 255, 0.786);
+    --text-3: rgba(255, 255, 255, 0.54);
+    --fill: rgba(255, 255, 255, 0.06);
+    --fill-hover: rgba(255, 255, 255, 0.09);
+    --fill-press: rgba(255, 255, 255, 0.12);
+    --card: rgba(255, 255, 255, 0.05);
+    --stroke: rgba(255, 255, 255, 0.08);
+    --stroke-strong: rgba(255, 255, 255, 0.2);
+    --track: rgba(255, 255, 255, 0.08);
+    --knob: #ffffff;
+    --shadow-knob: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur: 0.01ms;
+  }
+}

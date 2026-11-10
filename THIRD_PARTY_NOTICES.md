@@ -44,9 +44,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-## Fluent UI System Icons
-
-Some UI icons are taken from https://github.com/microsoft/fluentui-system-icons (added in Phase 5).
-
-MIT License, Copyright (c) 2020 Microsoft Corporation.

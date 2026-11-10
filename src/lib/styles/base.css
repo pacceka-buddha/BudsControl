@@ -1,9 +1,12 @@
-/* Base styles shared by every window. Design tokens arrive in Phase 5 (tokens.css). */
+/* Base styles shared by every window. */
+@import './tokens.css';
+
 :root {
-  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Cantarell, sans-serif;
+  font-family: var(--font);
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.35;
   color-scheme: light dark;
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -19,7 +22,67 @@ body {
   padding: 0;
 }
 
+/* The window is the flyout: no card inside a transparent window, so growing the window never shows
+   a differently coloured strip. The translucent surface sits over the window's Acrylic effect. */
+html {
+  background: var(--surface);
+}
+
 body {
   user-select: none;
   cursor: default;
+  /* Only needed when the content is taller than the screen (the window is then clamped). */
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: default;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Stand-in drop-down used only outside the app (see menu.ts); in the app menus are native. */
+.page-menu {
+  position: fixed;
+  z-index: 100;
+  min-width: 160px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-solid);
+  border: 1px solid var(--stroke-strong);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.page-menu button {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  text-align: left;
+  white-space: pre;
+}
+.page-menu button:hover:not(:disabled) {
+  background: var(--fill-hover);
+}
+.page-menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--stroke);
 }
