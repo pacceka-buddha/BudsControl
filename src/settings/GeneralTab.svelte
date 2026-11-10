@@ -63,7 +63,7 @@
   </section>
 
   <div class="group">
-    <SettingRow title="Launch at login" description="Start Buds Control in the notification area when you sign in to Windows.">
+    <SettingRow title="Launch at login" description="Start Buds Control in the notification area when you sign in.">
       <ToggleSwitch label="Launch at login" checked={launchAtLogin} onchange={toggleLaunch} />
     </SettingRow>
     {#if launchError}<p class="error" role="alert">{launchError}</p>{/if}

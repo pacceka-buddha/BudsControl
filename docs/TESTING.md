@@ -78,6 +78,18 @@ The same text is in `%LOCALAPPDATA%\BudsControl\BudsControl.log`. **If no candid
    the release build; leave it idle for 5 minutes (Task Manager: about 0 % CPU).
 4. Tag `v0.1.0` and confirm the Release workflow attaches the setup exe and the portable zip.
 
+## Gate 11: Linux (nobody has run this on a real Linux desktop yet: all items are PENDING)
+
+Needs a Linux machine with BlueZ and OnePlus / OPPO / realme buds, X11 and Wayland sessions if possible.
+
+1. `budsctl devices` lists the paired buds; `budsctl sdp` shows `HeyMelody 079A: advertised`.
+2. `budsctl status` (app closed) connects and prints the state block; then run the checklist above with the AppImage:
+   at least rows 1-8, 11, 14 (X11), 16, 17, 18.
+3. Tray menu: "Open Buds Control" opens the flyout at the pointer; clicking elsewhere closes it.
+4. Shortcut on X11: popup is a desktop notification that is replaced, not stacked. On Wayland the Shortcuts tab shows
+   the `budsctl` hint.
+5. If the connection fails: send the log (`~/.local/share/BudsControl/BudsControl.log`) and `budsctl sdp`.
+
 ## Without hardware
 
 `budsctl --fake <command>` (or `BUDS_FAKE=1` for the app, from Phase 4) runs against a simulated Buds 4, so

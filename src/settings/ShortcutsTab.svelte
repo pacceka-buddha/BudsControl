@@ -6,6 +6,13 @@
   import SettingRow from '../lib/components/SettingRow.svelte'
   import ShortcutRecorder from '../lib/components/ShortcutRecorder.svelte'
   import { app } from '../lib/stores.svelte'
+  import { onMount } from 'svelte'
+
+  // Wayland has no global shortcuts for ordinary apps; the desktop's own keyboard settings do the job.
+  let wayland = $state(false)
+  onMount(() => {
+    void api.getPlatform().then((info) => (wayland = info.wayland))
+  })
 
   interface Props {
     settings: Settings
@@ -42,9 +49,18 @@
       </SettingRow>
     {/each}
   </div>
-  <p class="note">
-    Shortcuts work everywhere, even when Buds Control isn't in front. Include Ctrl, Alt, Shift or Win (or use an F-key).
-  </p>
+  {#if wayland}
+    <p class="note warn">
+      This desktop session (Wayland) doesn't allow apps to register global shortcuts. In your desktop's keyboard
+      settings, bind a key to a command instead: <code>budsctl cycle</code>, <code>budsctl anc</code>,
+      <code>budsctl transparency</code> or <code>budsctl off</code>.
+    </p>
+  {:else}
+    <p class="note">
+      Shortcuts work everywhere, even when Buds Control isn't in front. Include Ctrl, Alt, Shift or Win (or use an
+      F-key).
+    </p>
+  {/if}
 </div>
 
 <style>
@@ -66,6 +82,14 @@
     margin: 0;
     font-size: 12px;
     color: var(--text-2);
+  }
+  .warn {
+    padding: 8px 10px;
+    border-radius: var(--radius-control);
+    background: var(--fill);
+  }
+  code {
+    font-family: var(--font-mono);
   }
   /* The conflict description is an error, not a hint. */
   .group :global(.desc) {

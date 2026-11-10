@@ -5,14 +5,21 @@
 //! `{"line":"..."}` for each line of output and finally `{"exit":0}`. The server runs the very same
 //! [`cli::execute`] against its live controller, so the output is identical to a direct run.
 //!
-//! Security: the socket belongs to the user who runs the app (the name contains the user name and the
-//! pipe's default access rights let only that user, administrators and SYSTEM write to it).
+//! Security: the socket belongs to the user who runs the app. On Windows the name contains the user name
+//! and the pipe's default access rights let only that user, administrators and SYSTEM write to it. On
+//! Unix it is a socket file (mode 0600) in `$XDG_RUNTIME_DIR` (a private directory) or, failing that, in
+//! a private (0700) directory under the temp folder; abstract sockets are avoided because they have no
+//! access control.
 
 use std::io::{self, Write};
 use std::time::Duration;
 
+#[cfg(unix)]
+use interprocess::local_socket::GenericFilePath;
+#[cfg(not(unix))]
+use interprocess::local_socket::GenericNamespaced;
 use interprocess::local_socket::tokio::{Stream, prelude::*};
-use interprocess::local_socket::{GenericFilePath, GenericNamespaced, ListenerOptions, Name};
+use interprocess::local_socket::{ListenerOptions, Name};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::mpsc;
@@ -55,17 +62,35 @@ pub fn default_name() -> String {
     format!("budscontrol-{safe}")
 }
 
+#[cfg(not(unix))]
 fn socket_name(name: &str) -> io::Result<Name<'static>> {
-    if GenericNamespaced::is_supported() {
-        name.to_owned().to_ns_name::<GenericNamespaced>()
-    } else {
-        let dir = std::env::var_os("XDG_RUNTIME_DIR")
-            .map(std::path::PathBuf::from)
-            .unwrap_or_else(std::env::temp_dir);
-        dir.join(format!("{name}.sock"))
-            .into_os_string()
-            .to_fs_name::<GenericFilePath>()
-    }
+    name.to_owned().to_ns_name::<GenericNamespaced>()
+}
+
+/// The socket file for `name`: in `$XDG_RUNTIME_DIR` (already private to the user), else in a private
+/// directory below the temp folder.
+#[cfg(unix)]
+fn socket_path(name: &str) -> io::Result<std::path::PathBuf> {
+    use std::os::unix::fs::DirBuilderExt;
+    let dir = match std::env::var_os("XDG_RUNTIME_DIR").filter(|d| !d.is_empty()) {
+        Some(dir) => std::path::PathBuf::from(dir),
+        None => {
+            let dir = std::env::temp_dir().join(format!("{}-private", default_name()));
+            std::fs::DirBuilder::new()
+                .mode(0o700)
+                .recursive(true)
+                .create(&dir)?;
+            dir
+        }
+    };
+    Ok(dir.join(format!("{name}.sock")))
+}
+
+#[cfg(unix)]
+fn socket_name(name: &str) -> io::Result<Name<'static>> {
+    socket_path(name)?
+        .into_os_string()
+        .to_fs_name::<GenericFilePath>()
 }
 
 /// Serves commands for `handle` on the default socket until the task is dropped.
@@ -78,6 +103,13 @@ pub async fn serve_on(name: &str, handle: ControllerHandle) -> io::Result<()> {
         .name(socket_name(name)?)
         .try_overwrite(true)
         .create_tokio()?;
+    // Only the user may talk to the app (the directory is private already; this is the second lock).
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ =
+            std::fs::set_permissions(socket_path(name)?, std::fs::Permissions::from_mode(0o600));
+    }
     loop {
         let connection = match listener.accept().await {
             Ok(c) => c,

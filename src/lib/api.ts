@@ -1,6 +1,7 @@
 // Typed wrappers around the Tauri commands (src-tauri/src/commands.rs). Argument names are camelCase
 // here; Tauri maps them to the snake_case Rust parameters.
 
+import type { PlatformInfo } from './bindings/PlatformInfo'
 import { invoke } from './tauri'
 import type { AncLevel } from './bindings/AncLevel'
 import type { EarSide } from './bindings/EarSide'
@@ -52,6 +53,8 @@ export const api = {
   getHudPending: () => invoke<HudPayload | null>('get_hud_pending'),
 
   getAccentColor: () => invoke<string | null>('get_accent_color'),
+  /** Which OS the app runs on (`windows`, `linux`, `macos`) and whether it is a Wayland session. */
+  getPlatform: () => invoke<PlatformInfo>('get_platform'),
   flyoutResize: (height: number) => invoke<void>('flyout_resize', { height }),
   flyoutHide: () => invoke<void>('flyout_hide'),
   /** Tell the flyout a native menu is open, so losing focus to it doesn't hide the flyout. */

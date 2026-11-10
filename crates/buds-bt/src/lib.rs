@@ -8,6 +8,12 @@ pub mod plan;
 #[cfg(windows)]
 mod win;
 
+#[cfg(target_os = "linux")]
+mod linux;
+
+#[cfg(target_os = "linux")]
+pub use linux::{LinuxPlatform, sdp_report};
+
 #[cfg(windows)]
 pub use win::{WindowsPlatform, audio_reconnect, audio_report, sdp_report};
 
@@ -15,5 +21,9 @@ pub use win::{WindowsPlatform, audio_reconnect, audio_report, sdp_report};
 #[cfg(windows)]
 pub type NativePlatform = WindowsPlatform;
 
+/// The backend for the OS this was built for, if there is one yet.
+#[cfg(target_os = "linux")]
+pub type NativePlatform = LinuxPlatform;
+
 /// Whether this build has a native Bluetooth backend.
-pub const HAS_NATIVE_BACKEND: bool = cfg!(windows);
+pub const HAS_NATIVE_BACKEND: bool = cfg!(any(windows, target_os = "linux"));

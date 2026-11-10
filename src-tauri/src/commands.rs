@@ -187,6 +187,27 @@ pub fn export_log(state: State<AppState>) -> String {
     state.handle.log().export_text()
 }
 
+/// Which OS the app runs on, so the pages can adapt (solid backgrounds on Linux, the Wayland hint).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, ts_rs::TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlatformInfo {
+    /// `windows`, `linux` or `macos`.
+    pub os: String,
+    /// A Wayland session: no global shortcuts, and windows can't be positioned.
+    pub wayland: bool,
+}
+
+#[tauri::command]
+pub fn get_platform() -> PlatformInfo {
+    PlatformInfo {
+        os: std::env::consts::OS.to_string(),
+        wayland: cfg!(target_os = "linux")
+            && (std::env::var("XDG_SESSION_TYPE").is_ok_and(|v| v.eq_ignore_ascii_case("wayland"))
+                || std::env::var_os("WAYLAND_DISPLAY").is_some()),
+    }
+}
+
 #[tauri::command]
 pub fn get_accent_color() -> Option<String> {
     crate::theme::accent_color()

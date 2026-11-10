@@ -4,7 +4,8 @@ A tray app for switching **Noise Cancellation**, **Transparency** and **Off** on
 without the phone app. A Windows-first port (Linux and macOS to follow) of
 [amarsakore/BudsControl](https://github.com/amarsakore/BudsControl), built with Rust + Tauri 2 and Svelte.
 
-> **Status:** Windows build ready for testing, tested with OnePlus Buds 4. Linux and macOS are not built yet.
+> **Status:** the Windows build is tested with OnePlus Buds 4. The Linux build compiles and passes the checks but
+> has not been run on a real Linux desktop yet (help wanted, see below). macOS is not built yet.
 > See [PLAN.md](PLAN.md) and [docs/PROGRESS.md](docs/PROGRESS.md).
 
 ## Features
@@ -43,6 +44,21 @@ onto the taskbar, or turn it on under *Settings > Personalization > Taskbar > Ot
 Click the tray icon for the flyout; right-click for the menu (modes, Settings, Reconnect, Quit). Starting the
 app again just opens the flyout.
 
+## Linux (untested on hardware)
+
+Needs BlueZ (`bluetoothd` running) and a desktop with a system tray (KDE, XFCE, Cinnamon, or GNOME with the AppIndicator
+extension). Pair the buds in your desktop's Bluetooth settings first.
+
+- **AppImage** (`BudsControl-<version>-linux-x64.AppImage`): `chmod +x` it and run. **.deb**
+  (`BudsControl-<version>-linux-x64.deb`): `sudo apt install ./BudsControl-*.deb`.
+- Linux trays don't report clicks, so everything starts from the tray menu: **Open Buds Control** opens the flyout at
+  the mouse pointer (centred on Wayland).
+- Mode changes made with a shortcut show a desktop notification instead of the popup. Global shortcuts work on X11
+  only; on Wayland bind keys to `budsctl cycle` (or `anc`, `transparency`, `off`) in your desktop's keyboard settings.
+- Buds Control talks to BlueZ over D-Bus, so you must be allowed to use Bluetooth (on some distributions that means
+  being in the `bluetooth` group). `budsctl sdp` shows which services BlueZ knows for your buds.
+- If you try it, please report what happened (`budsctl status`, the log at `~/.local/share/BudsControl/BudsControl.log`).
+
 ## Command line
 
 ```text
@@ -76,7 +92,9 @@ cargo build --workspace
 npm run tauri dev      # opens the app (set BUDS_FAKE=1 to use simulated buds)
 ```
 
-Release build (installer + portable zip into `release/`): `./scripts/package-windows.ps1`. The app icon comes from
+Release build (installer + portable zip into `release/`): `./scripts/package-windows.ps1`; on Linux
+`./scripts/package-linux.sh` (AppImage + .deb; needs `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+libdbus-1-dev pkg-config patchelf libssl-dev libxdo-dev`). The app icon comes from
 `cargo run -p icongen -- app-icon.png` followed by `npx tauri icon app-icon.png`.
 
 Design review without the app or the buds: `npm run dev`, then open

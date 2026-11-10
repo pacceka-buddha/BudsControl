@@ -95,6 +95,58 @@ pub fn place(icon: Option<Rect>, work: Rect, size: (i32, i32), margin: i32) -> P
     Placement { x, y, edge }
 }
 
+/// What the flyout is placed relative to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Anchor {
+    /// The tray icon's rectangle (Windows, macOS).
+    Icon(Rect),
+    /// The pointer when the tray gives no icon position (Linux, where the tray menu opens the flyout).
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    Point(i32, i32),
+    /// Nowhere known, and windows can't be positioned (Wayland).
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    Centered,
+    /// Nowhere known: the bottom-right corner, where a tray usually is.
+    Corner,
+}
+
+/// Top-left of the flyout for `anchor`.
+pub fn place_at(anchor: Anchor, work: Rect, size: (i32, i32), margin: i32) -> (i32, i32) {
+    match anchor {
+        Anchor::Icon(icon) => {
+            let p = place(Some(icon), work, size, margin);
+            (p.x, p.y)
+        }
+        Anchor::Corner => {
+            let p = place(None, work, size, margin);
+            (p.x, p.y)
+        }
+        Anchor::Point(x, y) => near_point((x, y), work, size, margin),
+        Anchor::Centered => (
+            work.x + (work.w - size.0) / 2,
+            work.y + (work.h - size.1) / 2,
+        ),
+    }
+}
+
+/// A window of `size` opened at a point: centred on it horizontally, below it when there is room and
+/// above it otherwise, kept inside the work area.
+pub fn near_point(point: (i32, i32), work: Rect, size: (i32, i32), margin: i32) -> (i32, i32) {
+    let (w, h) = size;
+    let (min_x, max_x) = (work.x + margin, work.right() - w - margin);
+    let (min_y, max_y) = (work.y + margin, work.bottom() - h - margin);
+    let below = point.1 + margin;
+    let y = if below <= max_y {
+        below
+    } else {
+        point.1 - h - margin
+    };
+    (
+        clamp_span(point.0 - w / 2, min_x, max_x),
+        clamp_span(y, min_y, max_y),
+    )
+}
+
 /// Top-left of the HUD window: horizontally centred in the work area, its bottom edge `lift` pixels
 /// above the work area's bottom.
 pub fn hud_position(work: Rect, size: (i32, i32), lift: i32) -> (i32, i32) {
@@ -107,6 +159,34 @@ pub fn hud_position(work: Rect, size: (i32, i32), lift: i32) -> (i32, i32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_window_opened_at_the_pointer_goes_below_it_or_above_when_there_is_no_room() {
+        let work = Rect::new(0, 0, 1920, 1080);
+        let size = (300, 400);
+        // Pointer near the top (a top panel): the window hangs below it, centred on it.
+        assert_eq!(near_point((960, 20), work, size, 12), (810, 32));
+        // Pointer near the bottom: the window sits above it.
+        assert_eq!(near_point((960, 1060), work, size, 12), (810, 648));
+        // Pointer in a corner: kept inside the work area.
+        assert_eq!(near_point((1915, 1075), work, size, 12), (1608, 663));
+        assert_eq!(near_point((2, 5), work, size, 12), (12, 17));
+    }
+
+    #[test]
+    fn anchors_map_to_positions() {
+        let work = Rect::new(0, 0, 1920, 1080);
+        let size = (300, 400);
+        assert_eq!(place_at(Anchor::Centered, work, size, 12), (810, 340));
+        let corner = place(None, work, size, 12);
+        assert_eq!(
+            place_at(Anchor::Corner, work, size, 12),
+            (corner.x, corner.y)
+        );
+        let icon = Rect::new(1800, 1040, 16, 16);
+        let p = place(Some(icon), work, size, 12);
+        assert_eq!(place_at(Anchor::Icon(icon), work, size, 12), (p.x, p.y));
+    }
 
     // A 1920x1080 monitor with a 48 px taskbar at the bottom.
     const WORK_BOTTOM: Rect = Rect {

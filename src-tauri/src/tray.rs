@@ -44,7 +44,14 @@ pub fn build(app: &AppHandle) -> tauri::Result<TrayState> {
     let settings = MenuItemBuilder::with_id("settings", "Settings…").build(app)?;
     let reconnect = MenuItemBuilder::with_id("reconnect", "Reconnect").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit Buds Control").build(app)?;
-    let menu = MenuBuilder::new(app)
+    let menu = MenuBuilder::new(app);
+    // Linux trays report no clicks, so the menu is the way in: "Open" comes first.
+    #[cfg(target_os = "linux")]
+    let menu = {
+        let open = MenuItemBuilder::with_id("open", "Open Buds Control").build(app)?;
+        menu.item(&open).item(&PredefinedMenuItem::separator(app)?)
+    };
+    let menu = menu
         .item(&anc)
         .item(&transparency)
         .item(&off)
@@ -93,6 +100,7 @@ fn menu_event(app: &AppHandle, id: &str) {
         "anc" => handle.set_mode(NoiseMode::Anc, None),
         "transparency" => handle.set_mode(NoiseMode::Transparency, None),
         "off" => handle.set_mode(NoiseMode::Off, None),
+        "open" => app_windows::show_flyout(app, None),
         "settings" => app_windows::open_settings(app),
         "reconnect" => handle.reconnect(),
         "quit" => crate::quit(app),

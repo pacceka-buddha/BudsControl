@@ -3,13 +3,14 @@
 
 use std::time::{Duration, Instant};
 
+#[cfg(windows)]
 use tauri::window::{Effect, EffectsBuilder};
 use tauri::{
     AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
     WebviewWindow, WebviewWindowBuilder, WindowEvent,
 };
 
-use crate::positioning::{self, Rect};
+use crate::positioning::{self, Anchor, Rect};
 use crate::state::AppState;
 
 pub const FLYOUT: &str = "flyout";
@@ -24,11 +25,12 @@ const BLUR_CLICK_WINDOW: Duration = Duration::from_millis(300);
 
 /// Creates the flyout window, hidden. Hides itself when it loses focus.
 pub fn create_flyout(app: &AppHandle) -> tauri::Result<()> {
-    let window = WebviewWindowBuilder::new(app, FLYOUT, WebviewUrl::App("flyout.html".into()))
+    let builder = WebviewWindowBuilder::new(app, FLYOUT, WebviewUrl::App("flyout.html".into()))
         .title("Buds Control")
         .inner_size(FLYOUT_WIDTH, INITIAL_HEIGHT)
         .decorations(false)
-        .transparent(true)
+        // Linux has no window effects and a transparent window needs a compositor: solid there.
+        .transparent(cfg!(not(target_os = "linux")))
         .shadow(true)
         .always_on_top(true)
         .skip_taskbar(true)
@@ -36,9 +38,10 @@ pub fn create_flyout(app: &AppHandle) -> tauri::Result<()> {
         .maximizable(false)
         .minimizable(false)
         .visible(false)
-        .focused(false)
-        .effects(EffectsBuilder::new().effect(Effect::Acrylic).build())
-        .build()?;
+        .focused(false);
+    #[cfg(windows)]
+    let builder = builder.effects(EffectsBuilder::new().effect(Effect::Acrylic).build());
+    let window = builder.build()?;
 
     let handle = app.clone();
     window.on_window_event(move |event| match event {
@@ -101,24 +104,31 @@ pub fn show_flyout(app: &AppHandle, icon: Option<tauri::Rect>) {
     let Some(window) = flyout(app) else { return };
     let state = app.state::<AppState>();
 
-    // The icon's rectangle in physical pixels: the click's, the tray's, or the last known one.
+    // The icon's rectangle in physical pixels: the click's or the tray's. Without one (Linux, where the
+    // tray reports neither) the pointer; failing all of that, the last known anchor.
     let icon = icon
         .or_else(|| {
             app.tray_by_id(crate::tray::TRAY_ID)
                 .and_then(|t| t.rect().ok().flatten())
         })
-        .map(|r| to_rect(&r))
-        .or(state.flyout.lock().unwrap().icon);
+        .map(|r| to_rect(&r));
+    let anchor = match icon {
+        Some(rect) => Anchor::Icon(rect),
+        None => fresh_anchor(app).unwrap_or(state.flyout.lock().unwrap().anchor),
+    };
 
-    // The monitor the icon is on (the primary one when unknown).
-    let monitor = icon
-        .map(|r| r.center())
-        .and_then(|(x, y)| {
-            app.monitor_from_point(f64::from(x), f64::from(y))
-                .ok()
-                .flatten()
-        })
-        .or_else(|| app.primary_monitor().ok().flatten());
+    // The monitor the anchor is on (the primary one when unknown).
+    let monitor = match anchor {
+        Anchor::Icon(r) => Some(r.center()),
+        Anchor::Point(x, y) => Some((x, y)),
+        Anchor::Centered | Anchor::Corner => None,
+    }
+    .and_then(|(x, y)| {
+        app.monitor_from_point(f64::from(x), f64::from(y))
+            .ok()
+            .flatten()
+    })
+    .or_else(|| app.primary_monitor().ok().flatten());
     let (work, scale) = match &monitor {
         Some(m) => {
             let w = m.work_area();
@@ -137,12 +147,12 @@ pub fn show_flyout(app: &AppHandle, icon: Option<tauri::Rect>) {
 
     let height = {
         let mut f = state.flyout.lock().unwrap();
-        f.icon = icon;
+        f.anchor = anchor;
         f.work = Some(work);
         f.scale = scale;
         f.height
     };
-    apply_geometry(&window, icon, work, scale, height);
+    apply_geometry(&window, anchor, work, scale, height);
     let _ = window.show();
     let _ = window.set_focus();
     let _ = window.emit("flyout-shown", ());
@@ -152,32 +162,47 @@ pub fn show_flyout(app: &AppHandle, icon: Option<tauri::Rect>) {
 pub fn resize_flyout(app: &AppHandle, requested: f64) {
     let Some(window) = flyout(app) else { return };
     let state = app.state::<AppState>();
-    let (icon, work, scale, height) = {
+    let (anchor, work, scale, height) = {
         let mut f = state.flyout.lock().unwrap();
         let max = f
             .work
             .map_or(f64::MAX, |w| f64::from(w.h) / f.scale - 2.0 * MARGIN);
         f.height = requested.clamp(MIN_HEIGHT, max.max(MIN_HEIGHT));
-        (f.icon, f.work, f.scale, f.height)
+        (f.anchor, f.work, f.scale, f.height)
     };
     if window.is_visible().unwrap_or(false)
         && let Some(work) = work
     {
-        apply_geometry(&window, icon, work, scale, height);
+        apply_geometry(&window, anchor, work, scale, height);
     } else {
         let _ = window.set_size(LogicalSize::new(FLYOUT_WIDTH, height));
     }
 }
 
 /// Sizes and positions the window (physical pixels, so mixed-DPI monitors behave).
-fn apply_geometry(window: &WebviewWindow, icon: Option<Rect>, work: Rect, scale: f64, height: f64) {
+fn apply_geometry(window: &WebviewWindow, anchor: Anchor, work: Rect, scale: f64, height: f64) {
     let size = (
         (FLYOUT_WIDTH * scale).round() as i32,
         (height * scale).round() as i32,
     );
-    let placement = positioning::place(icon, work, size, (MARGIN * scale).round() as i32);
+    let (x, y) = positioning::place_at(anchor, work, size, (MARGIN * scale).round() as i32);
     let _ = window.set_size(PhysicalSize::new(size.0 as u32, size.1 as u32));
-    let _ = window.set_position(PhysicalPosition::new(placement.x, placement.y));
+    let _ = window.set_position(PhysicalPosition::new(x, y));
+}
+
+/// Linux: the tray gives no icon position and no click events (the flyout is opened from the tray menu),
+/// so the flyout appears at the pointer. Where the pointer can't be read (Wayland) it is centred.
+#[cfg(target_os = "linux")]
+fn fresh_anchor(app: &AppHandle) -> Option<Anchor> {
+    Some(match app.cursor_position() {
+        Ok(p) => Anchor::Point(p.x.round() as i32, p.y.round() as i32),
+        Err(_) => Anchor::Centered,
+    })
+}
+
+#[cfg(not(target_os = "linux"))]
+fn fresh_anchor(_app: &AppHandle) -> Option<Anchor> {
+    None
 }
 
 fn to_rect(rect: &tauri::Rect) -> Rect {
@@ -203,11 +228,14 @@ pub fn open_settings(app: &AppHandle) {
             .center()
     };
     // A Mica backdrop (Windows 11) behind a translucent page; plain window where it isn't available.
+    #[cfg(windows)]
     let built = builder()
         .transparent(true)
         .effects(EffectsBuilder::new().effect(Effect::Mica).build())
         .build()
         .or_else(|_| builder().build());
+    #[cfg(not(windows))]
+    let built = builder().build();
     match built {
         Ok(window) => {
             // If the window goes away while the recorder is listening, shortcuts must work again.

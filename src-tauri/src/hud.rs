@@ -1,14 +1,18 @@
 //! The on-screen popup shown when a shortcut changes the mode (like the system volume popup): a
 //! transparent, click-through, non-activating window at the bottom centre of the monitor the mouse is on.
 //! The page (`hud.html`) does the fading; this side shows, positions and finally hides the window.
+//! On Linux a desktop notification is shown instead (see `notify`), so the window code is unused there.
+#![cfg_attr(target_os = "linux", allow(dead_code))]
 
 use std::time::Duration;
 
 use buds_core::controller::Snapshot;
 use buds_core::types::{AncLevel, LinkState, NoiseMode};
 use serde::Serialize;
+#[cfg(not(target_os = "linux"))]
+use tauri::Emitter;
 use tauri::{
-    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindow,
+    AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindow,
     WebviewWindowBuilder,
 };
 use ts_rs::TS;
@@ -71,7 +75,10 @@ impl HudPayload {
 /// Creates the (hidden) HUD window ahead of time. Creating a webview window takes the keyboard focus
 /// for a moment, which must not happen while the user is typing in another app.
 pub fn prepare(app: &AppHandle) {
-    let _ = window(app);
+    // Linux shows a desktop notification instead of a window.
+    if cfg!(not(target_os = "linux")) {
+        let _ = window(app);
+    }
 }
 
 fn window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
@@ -96,7 +103,75 @@ fn window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     Ok(window)
 }
 
+/// The two lines the popup shows (also the text of the Linux notification).
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub fn text(payload: &HudPayload) -> (String, String) {
+    match (payload.kind, payload.mode) {
+        (HudKind::Mode, Some(mode)) => {
+            let title = match mode {
+                NoiseMode::Anc => "Noise Cancellation",
+                NoiseMode::Transparency => "Transparency",
+                NoiseMode::Off => "Off",
+            };
+            let subtitle = match payload.level {
+                Some(level) => format!("{} level", level_title(level)),
+                None => payload.device_name.clone(),
+            };
+            (title.to_string(), subtitle)
+        }
+        _ => (
+            "Buds not connected".to_string(),
+            payload.device_name.clone(),
+        ),
+    }
+}
+
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+fn level_title(level: AncLevel) -> &'static str {
+    match level {
+        AncLevel::Smart => "Smart",
+        AncLevel::Max => "Max",
+        AncLevel::Moderate => "Moderate",
+        AncLevel::Mild => "Mild",
+        AncLevel::Adaptive => "Adaptive",
+    }
+}
+
+/// Linux: one desktop notification that is replaced (same id) on every press, like the volume popup.
+#[cfg(target_os = "linux")]
+fn notify(payload: &HudPayload) {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static LAST_ID: AtomicU32 = AtomicU32::new(0);
+
+    let (title, body) = text(payload);
+    let replace = LAST_ID.load(Ordering::Relaxed);
+    // `show` talks to the notification daemon synchronously; keep it off the caller's thread.
+    std::thread::spawn(move || {
+        let mut notification = notify_rust::Notification::new();
+        notification
+            .appname("Buds Control")
+            .summary(&title)
+            .body(&body)
+            .icon("audio-headphones")
+            .hint(notify_rust::Hint::Transient(true))
+            .timeout(notify_rust::Timeout::Milliseconds(2000));
+        if replace != 0 {
+            notification.id(replace);
+        }
+        if let Ok(handle) = notification.show() {
+            LAST_ID.store(handle.id(), Ordering::Relaxed);
+        }
+    });
+}
+
 /// Shows the HUD (or restarts it if it is already showing).
+#[cfg(target_os = "linux")]
+pub fn show(_app: &AppHandle, payload: HudPayload) {
+    notify(&payload);
+}
+
+/// Shows the HUD (or restarts it if it is already showing).
+#[cfg(not(target_os = "linux"))]
 pub fn show(app: &AppHandle, mut payload: HudPayload) {
     let state = app.state::<AppState>();
     let generation = {
@@ -172,6 +247,27 @@ mod tests {
         s.level = level;
         s.device_name = "OnePlus Buds 4".into();
         s
+    }
+
+    #[test]
+    fn the_notification_text_matches_the_popup() {
+        let anc = HudPayload::from_snapshot(&snapshot(
+            LinkState::Connected,
+            Some(NoiseMode::Anc),
+            Some(AncLevel::Max),
+        ));
+        assert_eq!(
+            text(&anc),
+            ("Noise Cancellation".into(), "Max level".into())
+        );
+        let off =
+            HudPayload::from_snapshot(&snapshot(LinkState::Connected, Some(NoiseMode::Off), None));
+        assert_eq!(text(&off), ("Off".into(), "OnePlus Buds 4".into()));
+        let down = HudPayload::from_snapshot(&snapshot(LinkState::Searching, None, None));
+        assert_eq!(
+            text(&down),
+            ("Buds not connected".into(), "OnePlus Buds 4".into())
+        );
     }
 
     #[test]

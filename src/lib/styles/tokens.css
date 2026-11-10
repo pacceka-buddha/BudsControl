@@ -57,6 +57,15 @@
   }
 }
 
+/* Linux: no Acrylic behind the page, so the surface is solid (and the borderless window gets an edge). */
+:root[data-platform='linux'] {
+  --surface: var(--surface-solid);
+}
+
+:root[data-platform='linux'] body {
+  box-shadow: inset 0 0 0 1px var(--stroke-strong);
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --dur: 0.01ms;

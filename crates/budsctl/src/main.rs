@@ -104,7 +104,7 @@ async fn run(args: Args) -> i32 {
     native(&args).await
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux"))]
 async fn native(args: &Args) -> i32 {
     let settings = buds_core::paths::settings_path()
         .map_or_else(SettingsStore::in_memory, SettingsStore::load);
@@ -113,7 +113,7 @@ async fn native(args: &Args) -> i32 {
     with_platform(buds_bt::NativePlatform::new(), args, settings, log).await
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "linux")))]
 async fn native(_args: &Args) -> i32 {
     eprintln!(
         "budsctl: there is no Bluetooth backend for this operating system yet (use --fake to try the commands)"
@@ -132,7 +132,7 @@ async fn with_platform<P: Platform>(
         return list_devices(&platform.paired_devices().await);
     }
     if args.command.first().map(String::as_str) == Some("sdp") {
-        return show_services(&platform.paired_devices().await);
+        return show_services(&platform.paired_devices().await).await;
     }
     if args.command.first().map(String::as_str) == Some("audio") {
         let reconnect = args.command.get(1).map(String::as_str) == Some("reconnect");
@@ -148,8 +148,8 @@ async fn with_platform<P: Platform>(
 }
 
 /// `budsctl sdp`: the control services of the paired buds (a connected one is preferred).
-#[cfg(windows)]
-fn show_services(devices: &[BtDevice]) -> i32 {
+#[cfg(any(windows, target_os = "linux"))]
+async fn show_services(devices: &[BtDevice]) -> i32 {
     let buds = devices
         .iter()
         .filter(|d| name_looks_like_buds(d.name.as_deref().unwrap_or("")))
@@ -163,14 +163,18 @@ fn show_services(devices: &[BtDevice]) -> i32 {
         device.address_string(),
         device.name.as_deref().unwrap_or("(unnamed)")
     );
-    for line in buds_bt::sdp_report(device.address) {
+    #[cfg(windows)]
+    let lines = buds_bt::sdp_report(device.address);
+    #[cfg(target_os = "linux")]
+    let lines = buds_bt::sdp_report(device.address).await;
+    for line in lines {
         println!("  {line}");
     }
     0
 }
 
-#[cfg(not(windows))]
-fn show_services(_devices: &[BtDevice]) -> i32 {
+#[cfg(not(any(windows, target_os = "linux")))]
+async fn show_services(_devices: &[BtDevice]) -> i32 {
     eprintln!("budsctl: service discovery is not available on this platform yet");
     3
 }
@@ -203,7 +207,9 @@ fn show_audio(devices: &[BtDevice], reconnect: bool) -> i32 {
 
 #[cfg(not(windows))]
 fn show_audio(_devices: &[BtDevice], _reconnect: bool) -> i32 {
-    eprintln!("budsctl: audio reconnect is not available on this platform yet");
+    eprintln!(
+        "budsctl: `audio` is a Windows diagnostic (BlueZ connects the audio profiles itself)"
+    );
     3
 }
 

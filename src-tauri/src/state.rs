@@ -5,12 +5,12 @@ use std::time::Instant;
 
 use buds_core::controller::ControllerHandle;
 
-use crate::positioning::Rect;
+use crate::positioning::{Anchor, Rect};
 
 /// Everything about the flyout window that outlives a single show/hide.
 pub struct FlyoutState {
-    /// Where the tray icon was when the flyout was last shown (physical pixels).
-    pub icon: Option<Rect>,
+    /// What the flyout was placed relative to when last shown (physical pixels).
+    pub anchor: Anchor,
     /// The work area of the monitor the flyout is on, and its scale factor.
     pub work: Option<Rect>,
     pub scale: f64,
@@ -26,7 +26,7 @@ pub struct FlyoutState {
 impl Default for FlyoutState {
     fn default() -> Self {
         FlyoutState {
-            icon: None,
+            anchor: Anchor::Corner,
             work: None,
             scale: 1.0,
             height: crate::app_windows::INITIAL_HEIGHT,
@@ -36,8 +36,9 @@ impl Default for FlyoutState {
     }
 }
 
-/// What the HUD window shows, and bookkeeping for its hide timer.
+/// What the HUD window shows, and bookkeeping for its hide timer (Linux has no HUD window).
 #[derive(Default)]
+#[cfg_attr(target_os = "linux", allow(dead_code))]
 pub struct HudState {
     /// The latest payload, for a page that finishes loading after it was emitted.
     pub pending: Option<crate::hud::HudPayload>,

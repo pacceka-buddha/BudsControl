@@ -384,3 +384,46 @@ Left for the owner / noted:
 - Builds are unsigned (SmartScreen warning); signing needs a certificate.
 - `BudsControl.exe` in the zip is the file Tauri patched with the installer type ("nsis"); harmless, only the updater
   looks at it (there is no updater).
+
+## Phase 11: Linux
+
+Code complete, type-checked and linted for Linux, **not run on Linux**: this PC has no Linux (no WSL distribution, no
+Docker) and the repository has no remote, so CI hasn't run either. Hardware items are PENDING in docs/TESTING.md (Gate 11).
+
+What was built:
+- **Bluetooth backend** (`crates/buds-bt/src/linux`, `bluer` 0.17 with BlueZ over D-Bus). `paired_devices` lists paired
+  devices (name or alias, connected, whether the HeyMelody UUID is advertised). `open` uses the shared candidate order:
+  for 079A / 1107 / serial port it registers a BlueZ *client profile* for that UUID, calls `Device.ConnectProfile` and takes
+  the RFCOMM socket from the `ConnectRequest`; fixed channels 15, 12, 13 use a raw RFCOMM socket. A UUID the buds don't
+  advertise counts as "not found", "already connected" counts as busy (so, as on Windows, a busy control service ends the
+  walk instead of landing on an unrelated service). One task owns the socket (read + queued writes); dropping the link
+  closes it. `page` = `Device.Connect` (BlueZ connects the audio profiles too). `budsctl sdp` prints which services are
+  advertised (BlueZ doesn't expose channel numbers).
+- **IPC on Unix**: a socket file (0600) in `$XDG_RUNTIME_DIR` (or a private 0700 directory under the temp folder) instead
+  of the abstract namespace, which has no access control.
+- **App**: tray menu gets "Open Buds Control" first (Linux trays give no click events or icon position); the flyout opens
+  at the pointer (`Anchor::Point`, below it or above when there is no room, 2 unit tests) or centred when the pointer
+  can't be read (Wayland); solid window and surface (no Acrylic/Mica; the page marks itself `data-platform="linux"` and
+  gets a hairline edge; checked in the browser simulator with `?platform=linux`); HUD -> one replaceable desktop
+  notification (`notify-rust`, hint transient, same id each time; text function unit-tested); Shortcuts tab shows the
+  `budsctl` hint on Wayland (`?platform=wayland`); "Launch at login" text is OS-neutral (the autostart plugin writes
+  `~/.config/autostart`). New command `get_platform`.
+- **Packaging/CI**: `scripts/package-linux.sh` (AppImage + .deb, deb depends on bluez, libdbus, webkit2gtk-4.1,
+  ayatana-appindicator), `release.yml` gets an ubuntu-22.04 job, `ci.yml` gets a whole-workspace clippy + test job on
+  Windows and Ubuntu (needs the frontend built first because the app embeds it).
+
+How it was checked without Linux: `rustup target add x86_64-unknown-linux-gnu`, then `cargo clippy --workspace
+--all-targets --all-features --target x86_64-unknown-linux-gnu -- -D warnings` passes (zero warnings). The system
+libraries are not available on Windows, so for that check only, `libdbus-sys` was patched with a build script that does
+nothing and a tiny stand-in `pkg-config` that claims every library exists (both kept in the scratchpad, not in the
+repository). That proves the Linux code compiles and lints; it proves nothing about how BlueZ, the tray or the
+notification daemon behave. Windows: 29 + other test suites, clippy, svelte-check, vitest all pass; the debug app's
+flyout still opens above the tray (Win32 window rectangle: bottom 812 of a 816 px work area).
+
+Left for the owner / noted:
+- Everything that needs Linux: connecting, the profile hand-off, the tray menu, notification, autostart, AppImage / deb
+  contents, CI. First thing to try on a Linux box: `budsctl devices`, `budsctl sdp`, `budsctl status`.
+- Known risks: BlueZ may refuse `RegisterProfile` without suitable D-Bus policy on some distributions; GNOME needs the
+  AppIndicator extension for any tray icon; AppImage autostart paths.
+- The GTK flyout loses focus handling differently on Wayland (compositor-dependent), so "closes when you click elsewhere"
+  is unverified there.

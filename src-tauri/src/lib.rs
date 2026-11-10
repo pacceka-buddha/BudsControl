@@ -89,6 +89,7 @@ pub fn run() {
             commands::get_hud_pending,
             commands::export_log,
             commands::get_accent_color,
+            commands::get_platform,
             commands::flyout_resize,
             commands::flyout_hide,
             commands::set_menu_open,
@@ -130,13 +131,13 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         }
         spawn_controller(platform, settings, log)
     } else {
-        #[cfg(windows)]
+        #[cfg(any(windows, target_os = "linux"))]
         {
-            spawn_controller(buds_bt::WindowsPlatform::new(), settings, log)
+            spawn_controller(buds_bt::NativePlatform::new(), settings, log)
         }
-        #[cfg(not(windows))]
+        #[cfg(not(any(windows, target_os = "linux")))]
         {
-            // No native backend on this OS yet (Phase 11 / 12): use the simulated buds.
+            // No native backend on this OS yet (Phase 12): use the simulated buds.
             spawn_controller(FakePlatform::new(), settings, log)
         }
     };
