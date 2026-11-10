@@ -59,6 +59,26 @@ struct Args {
 
 fn main() -> ExitCode {
     let args = Args::parse();
+    // macOS: IOBluetooth delivers its callbacks on the main thread's run loop, so the main thread runs
+    // that loop and the command (controller, runtime) runs on a worker thread.
+    #[cfg(target_os = "macos")]
+    {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let done = Arc::new(AtomicBool::new(false));
+        let finished = done.clone();
+        let worker = std::thread::spawn(move || {
+            let code = run_command(args);
+            finished.store(true, Ordering::Relaxed);
+            code
+        });
+        buds_bt::run_main_loop_until(&done);
+        worker.join().unwrap_or(ExitCode::from(1))
+    }
+    #[cfg(not(target_os = "macos"))]
+    run_command(args)
+}
+
+fn run_command(args: Args) -> ExitCode {
     let runtime = match tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -104,7 +124,7 @@ async fn run(args: Args) -> i32 {
     native(&args).await
 }
 
-#[cfg(any(windows, target_os = "linux"))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 async fn native(args: &Args) -> i32 {
     let settings = buds_core::paths::settings_path()
         .map_or_else(SettingsStore::in_memory, SettingsStore::load);
@@ -113,7 +133,7 @@ async fn native(args: &Args) -> i32 {
     with_platform(buds_bt::NativePlatform::new(), args, settings, log).await
 }
 
-#[cfg(not(any(windows, target_os = "linux")))]
+#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 async fn native(_args: &Args) -> i32 {
     eprintln!(
         "budsctl: there is no Bluetooth backend for this operating system yet (use --fake to try the commands)"
@@ -148,7 +168,7 @@ async fn with_platform<P: Platform>(
 }
 
 /// `budsctl sdp`: the control services of the paired buds (a connected one is preferred).
-#[cfg(any(windows, target_os = "linux"))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 async fn show_services(devices: &[BtDevice]) -> i32 {
     let buds = devices
         .iter()
@@ -163,7 +183,7 @@ async fn show_services(devices: &[BtDevice]) -> i32 {
         device.address_string(),
         device.name.as_deref().unwrap_or("(unnamed)")
     );
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "macos"))]
     let lines = buds_bt::sdp_report(device.address);
     #[cfg(target_os = "linux")]
     let lines = buds_bt::sdp_report(device.address).await;
@@ -173,7 +193,7 @@ async fn show_services(devices: &[BtDevice]) -> i32 {
     0
 }
 
-#[cfg(not(any(windows, target_os = "linux")))]
+#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 async fn show_services(_devices: &[BtDevice]) -> i32 {
     eprintln!("budsctl: service discovery is not available on this platform yet");
     3
@@ -208,7 +228,7 @@ fn show_audio(devices: &[BtDevice], reconnect: bool) -> i32 {
 #[cfg(not(windows))]
 fn show_audio(_devices: &[BtDevice], _reconnect: bool) -> i32 {
     eprintln!(
-        "budsctl: `audio` is a Windows diagnostic (BlueZ connects the audio profiles itself)"
+        "budsctl: `audio` is a Windows diagnostic (BlueZ and macOS connect the audio profiles themselves)"
     );
     3
 }

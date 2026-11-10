@@ -68,6 +68,9 @@ pub fn build(app: &AppHandle) -> tauri::Result<TrayState> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| menu_event(app, event.id().as_ref()))
         .on_tray_icon_event(|tray, event| tray_event(tray.app_handle(), &event));
+    // macOS: a template icon, so the menu bar tints it for light/dark menu bars and highlights.
+    #[cfg(target_os = "macos")]
+    let builder = builder.icon_as_template(true);
     let tray = builder.build(app)?;
     Ok(TrayState {
         tray,

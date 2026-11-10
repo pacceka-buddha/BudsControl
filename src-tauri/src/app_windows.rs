@@ -3,7 +3,7 @@
 
 use std::time::{Duration, Instant};
 
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "macos"))]
 use tauri::window::{Effect, EffectsBuilder};
 use tauri::{
     AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
@@ -41,6 +41,16 @@ pub fn create_flyout(app: &AppHandle) -> tauri::Result<()> {
         .focused(false);
     #[cfg(windows)]
     let builder = builder.effects(EffectsBuilder::new().effect(Effect::Acrylic).build());
+    // macOS: the system popover material behind the translucent page, with rounded corners.
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .effects(
+            EffectsBuilder::new()
+                .effect(Effect::Popover)
+                .radius(10.0)
+                .build(),
+        )
+        .visible_on_all_workspaces(true);
     let window = builder.build()?;
 
     let handle = app.clone();

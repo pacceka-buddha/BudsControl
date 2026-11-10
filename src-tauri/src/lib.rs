@@ -111,6 +111,9 @@ pub fn run() {
 }
 
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    // macOS: a menu bar app has no Dock icon and no menu bar of its own (Info.plist has LSUIElement too).
+    #[cfg(target_os = "macos")]
+    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
     let background = std::env::args().any(|a| a == "--background");
     let fake = fake_requested();
 

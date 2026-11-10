@@ -427,3 +427,45 @@ Left for the owner / noted:
   AppIndicator extension for any tray icon; AppImage autostart paths.
 - The GTK flyout loses focus handling differently on Wayland (compositor-dependent), so "closes when you click elsewhere"
   is unverified there.
+
+## Phase 12: macOS
+
+Code complete, type-checked and linted for macOS, **not run on a Mac** (no Mac here, no remote, CI hasn't run). Hardware
+items are PENDING (Gate 12 in docs/TESTING.md).
+
+What was built:
+- **Bluetooth backend** (`crates/buds-bt/src/macos`, `objc2-io-bluetooth` bindings): a port of the original's connection
+  logic. Candidates from the shared walk are mapped to RFCOMM channels: HeyMelody = the channel of the service record named
+  "enco" or of UUID 079A; 1107 and the serial port (only reached when the others are "not found") by UUID; fixed
+  channels 15, 12, 13 otherwise; a missing HeyMelody record also triggers a fresh SDP query like the original.
+  `openRFCOMMChannelAsync` with a delegate (`define_class!`, selectors `rfcommChannelOpenComplete:status:`,
+  `rfcommChannelClosed:`, `rfcommChannelData:data:length:`, `connectionComplete:status:`); 3 s per channel, a channel that
+  is already open or opens without telling us is used. Paging = `openConnection:withPageTimeout:8000` with a completion
+  delegate. All IOBluetooth calls run on the main dispatch queue (`on_main`; worker threads only wait); writes are queued
+  on it (a failed write closes the link). Data that arrives before the link exists is buffered.
+  Not ported because the controller already covers it: connect / disconnect / channel-open notifications (health tick,
+  wall-clock jump after sleep).
+- **`budsctl`** runs its command on a worker thread while the main thread runs a run loop (`run_main_loop_until`), because
+  IOBluetooth calls back on the main run loop. `budsctl sdp` lists the cached service records. IPC uses the private
+  socket file under `$TMPDIR`.
+- **App**: Accessory activation policy (no Dock icon) plus `LSUIElement`; template tray icon (the icon is already a single
+  colour with transparency, drawn black); flyout with the system Popover material (`macOSPrivateApi` in config and the
+  `macos-private-api` feature) and rounded corners; flyout and HUD visible on all Spaces; `Info.plist` with
+  `NSBluetoothAlwaysUsageDescription` (the original's text); ad hoc signing; `scripts/package-macos.sh` builds the .dmg for
+  the Mac's architecture (no universal build, because the sidecar is built per architecture); release job on
+  `macos-latest` (arm64) and `macos-13` (x64); the CI whole-workspace job now includes `macos-latest`.
+
+How it was checked without a Mac: `rustup target add aarch64-apple-darwin`, then `cargo clippy --workspace --all-targets
+--all-features --target aarch64-apple-darwin -- -D warnings` passes with no warnings. Only one build script needs a C
+compiler (`objc2-exception-helper`); for this check only it was patched with an empty build script (kept in the
+scratchpad, not in the repository). The type checker found one real bug on the way (edition-2024 closures captured the
+non-`Send` field instead of the `Send` wrapper). That proves the code compiles and is thread-safe in the Rust sense; it
+proves nothing about how IOBluetooth, the delegate callbacks, the run loop, the tray or the vibrancy behave. Windows and Linux
+checks were re-run after the changes.
+
+Left for the owner / noted:
+- Everything that needs a Mac. First things to try: `budsctl devices`, `budsctl sdp`, `budsctl status`.
+- Likely trouble spots: the delegate selectors / argument encodings (a mismatch would show as "channel opened but no
+  data"), the Bluetooth permission prompt for an ad hoc signed app, `NSPort` keeping the budsctl run loop alive, Popover
+  vibrancy with a transparent window, and the template icon's size at 1x / 2x.
+- Builds are not notarised (Gatekeeper prompt). The original Swift app remains the tested choice on macOS.

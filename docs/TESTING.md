@@ -90,6 +90,18 @@ Needs a Linux machine with BlueZ and OnePlus / OPPO / realme buds, X11 and Wayla
    the `budsctl` hint.
 5. If the connection fails: send the log (`~/.local/share/BudsControl/BudsControl.log`) and `budsctl sdp`.
 
+## Gate 12: macOS (nobody has run this on a Mac yet: all items are PENDING)
+
+Needs a Mac (11+) with OnePlus / OPPO / realme buds. The original Swift app is the reference for how it should behave.
+
+1. Open the .dmg build: Gatekeeper warning (ad hoc signature), then the Bluetooth permission prompt appears once.
+2. No Dock icon; a template icon in the menu bar that follows light/dark menu bars; click opens the flyout under it with
+   the vibrancy material, clicking elsewhere closes it; works on another Space and over a full-screen app.
+3. `budsctl devices`, `budsctl sdp` (expect an "enco link" record with channel 15 on the Buds 4), `budsctl status`
+   (app closed), then the checklist above: at least rows 1-8, 11, 12, 13, 14, 16, 17, 18.
+4. Shortcut popup (HUD) shows on every Space; Cmd-based shortcuts record correctly.
+5. If the connection fails: send `~/Library/Logs/BudsControl.log` and `budsctl sdp`.
+
 ## Without hardware
 
 `budsctl --fake <command>` (or `BUDS_FAKE=1` for the app, from Phase 4) runs against a simulated Buds 4, so

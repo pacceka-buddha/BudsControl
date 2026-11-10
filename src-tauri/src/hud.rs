@@ -100,6 +100,9 @@ fn window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
         .build()?;
     // Clicks go to whatever is underneath.
     window.set_ignore_cursor_events(true)?;
+    // macOS: show it on whichever space (or full-screen app) is in front.
+    #[cfg(target_os = "macos")]
+    window.set_visible_on_all_workspaces(true)?;
     Ok(window)
 }
 

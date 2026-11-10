@@ -14,6 +14,12 @@ mod linux;
 #[cfg(target_os = "linux")]
 pub use linux::{LinuxPlatform, sdp_report};
 
+#[cfg(target_os = "macos")]
+mod macos;
+
+#[cfg(target_os = "macos")]
+pub use macos::{MacPlatform, run_main_loop_until, sdp_report};
+
 #[cfg(windows)]
 pub use win::{WindowsPlatform, audio_reconnect, audio_report, sdp_report};
 
@@ -25,5 +31,9 @@ pub type NativePlatform = WindowsPlatform;
 #[cfg(target_os = "linux")]
 pub type NativePlatform = LinuxPlatform;
 
+/// The backend for the OS this was built for, if there is one yet.
+#[cfg(target_os = "macos")]
+pub type NativePlatform = MacPlatform;
+
 /// Whether this build has a native Bluetooth backend.
-pub const HAS_NATIVE_BACKEND: bool = cfg!(any(windows, target_os = "linux"));
+pub const HAS_NATIVE_BACKEND: bool = cfg!(any(windows, target_os = "linux", target_os = "macos"));

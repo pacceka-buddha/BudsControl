@@ -38,6 +38,10 @@ pub fn accent_color() -> Option<String> {
 /// can differ from the apps' theme. `BUDS_TASKBAR_THEME=light|dark` overrides it, for testing the icon
 /// without changing the system setting.
 pub fn taskbar_is_light() -> bool {
+    // macOS tints a "template" icon itself: it is drawn black, whatever the menu bar looks like.
+    if cfg!(target_os = "macos") {
+        return true;
+    }
     if let Ok(forced) = std::env::var("BUDS_TASKBAR_THEME") {
         match forced.to_ascii_lowercase().as_str() {
             "light" => return true,
