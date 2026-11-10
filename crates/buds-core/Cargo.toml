@@ -1,0 +1,11 @@
+[package]
+name = "buds-core"
+version.workspace = true
+description = "Platform-independent HeyMelody protocol, device catalog and controller"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]

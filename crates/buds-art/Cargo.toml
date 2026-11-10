@@ -1,0 +1,11 @@
+[package]
+name = "buds-art"
+version.workspace = true
+description = "Tray and app icon drawing (earbuds glyph and battery ring)"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]

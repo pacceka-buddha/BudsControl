@@ -1,0 +1,24 @@
+[package]
+name = "budscontrol"
+version.workspace = true
+description = "Tray app for OnePlus / OPPO / realme earbuds (HeyMelody protocol)"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "budscontrol_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.4", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.5", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+buds-core = { path = "../crates/buds-core" }
+buds-bt = { path = "../crates/buds-bt" }
+buds-art = { path = "../crates/buds-art" }

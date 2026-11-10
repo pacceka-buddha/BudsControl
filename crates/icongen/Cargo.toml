@@ -1,0 +1,11 @@
+[package]
+name = "icongen"
+version.workspace = true
+description = "Renders the app icon"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]

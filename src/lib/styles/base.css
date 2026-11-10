@@ -1,0 +1,25 @@
+/* Base styles shared by every window. Design tokens arrive in Phase 5 (tokens.css). */
+:root {
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Cantarell, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  color-scheme: light dark;
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  user-select: none;
+  cursor: default;
+}
