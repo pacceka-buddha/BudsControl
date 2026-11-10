@@ -29,3 +29,20 @@ Done. Gate 0 evidence:
 - `npm run tauri build -- --debug` produces `target/debug/bundle/nsis/Buds Control_0.1.0_x64-setup.exe` (2.46 MiB).
 - Bundle identifier is the placeholder `io.github.nilcodes.budscontrol` (change in `src-tauri/tauri.conf.json` if wanted).
 - Icons are still the Tauri defaults; Phase 10 generates the real ones.
+
+## Phase 1: protocol, parsers, catalog
+
+Done. Gate 1 evidence:
+
+- `cargo test -p buds-core`: 39 tests in `crates/buds-core/tests/gate1.rs` pass, plus 14 generated ts-rs export tests.
+  Covered: frame encode (`AA 07 00 00 06 01 01 00 00`), parser (one frame, 3 chunks, two frames, junk, 2-byte LEB128,
+  truncated tail, malformed lengths, noise fuzz), battery/capabilities/product ID/wear/switches/EQ/gestures/hosts
+  decoders (and "never panic on any prefix"), Buds 4 + Pro 3 noise bits, set-noise masks, custom EQ round trip,
+  catalog size (105, sorted, unique) and fallbacks (generic, realme).
+- `cargo clippy --workspace --all-targets -- -D warnings` and `npm run check` clean.
+- `tools/convert_catalog.py` regenerates `catalog/generated.rs` from the pinned upstream file (105 models; it aborts
+  if the parsed count differs from the entries in the Swift file).
+- TypeScript types are exported to `src/lib/bindings/` by `cargo test` (`.cargo/config.toml` sets `TS_RS_EXPORT_DIR`).
+
+Deviations from the Swift code (malformed input only): the frame parser treats a length varint longer than 4 bytes
+or a length above 65535 as noise instead of waiting forever. Documented in `docs/PROTOCOL.md`.
