@@ -12,12 +12,12 @@ Pair the buds in **Windows Settings > Bluetooth & devices**, take them out of th
 
 | # | Command | Expected | Result |
 |---|---|---|---|
-| 3.1 | `budsctl devices` | the Buds 4 listed as `connected`, `buds: yes` | |
-| 3.2 | `budsctl status` | `device:  OnePlus Buds 4 [065414] connected`, real L/R/case battery, current mode, EQ, low latency, gestures; exit code 0 | |
+| 3.1 | `budsctl devices` | the Buds 4 listed as `connected`, `buds: yes` |  pass 2026-11-10 (Buds 4 `connected`, `buds: yes`) |
+| 3.2 | `budsctl status` | `device:  OnePlus Buds 4 [065414] connected`, real L/R/case battery, current mode, EQ, low latency, gestures; exit code 0 |  pass 2026-11-10 (`[065414]`, L 100% R 100%, mode, EQ, gestures read; exit 0) |
 | 3.3 | `budsctl anc`, `budsctl transparency`, `budsctl off` | the mode audibly changes each time; `status` agrees | |
 | 3.4 | `budsctl smart`, `max`, `moderate`, `mild`, `adaptive` | each ANC level applies and reads back (`mode:    anc (<level>) [bit N]`) | |
 | 3.5 | `budsctl watch 30`, meanwhile take a bud out / put it back / use a gesture / long-press for a mode | pushes show up as `<- AA ... 04 02 ...` lines; `HOSTS` line lists the paired devices | |
-| 3.6 | `budsctl raw 0106` | a `-> AA 07 00 00 06 01 ..` line, then a `<- ..` line whose command bytes are `06 81` | |
+| 3.6 | `budsctl raw 0106` | a `-> AA 07 00 00 06 01 ..` line, then a `<- ..` line whose command bytes are `06 81` |  pass 2026-11-10 (reply `06 81`) |
 | 3.7 | `budsctl eq=1`, `budsctl eq=0` | EQ preset changes; `status` shows the preset name | |
 | 3.8 | `budsctl custom=0,2,4,2,0,-2` (needs a custom EQ on the buds) | band gains applied; `status` lists `62Hz:0 ...` | |
 | 3.9 | `budsctl lowlatency=on` then `off` | `status` shows `lowlat:  on` / `off` | |

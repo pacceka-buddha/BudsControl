@@ -100,3 +100,14 @@ Verified without the buds being connected:
   not-connected block and exits 1. The log file is written.
 
 Not verified yet (needs the connected buds): which candidate connects, replies, mode switching, etc.
+
+### Gate 3 hardware run, 2026-11-10 (OnePlus Buds 4, read-only part, run by Claude)
+
+- **Connect candidate: HeyMelody service 079A**, found by Windows' own SDP lookup; connected in ~360 ms (`connected via HeyMelody service 079A`).
+  Stored as connect hint `heymelody` in `settings.json`. The fallbacks (1107, SPP, channels) were not needed.
+- `budsctl status`: `OnePlus Buds 4 [065414]`, L/R 100%, mode read correctly (transparency, reported as bit 8 as the
+  catalog predicts), EQ preset, low latency, real gestures, 35 capability bits, `shows:` all six features.
+- `raw 0106` gets the `06 81` reply; `watch` shows pushes and the multipoint list (this PC + the phone).
+- Case battery is not reported while the buds are out of the case (`case -1%`), the UI will show "-".
+- Still for the owner (audible / physical): 3.3-3.5 (mode and level switching, watching pushes while using the buds),
+  3.7-3.11 (EQ, custom EQ, low latency, find, gesture), 3.12 (buds in the case -> exit 1).
