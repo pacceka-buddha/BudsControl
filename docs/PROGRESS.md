@@ -121,3 +121,32 @@ Final state equals the starting state (Transparency, preset 0, low latency off, 
 
 Still open, needs the owner: 3.5 (pushes while using the buds), 3.10 (find, loud: buds out of ears), 3.11 (a real
 double tap), 3.12 (buds in the case -> exit 1), and confirming by ear that the modes audibly change.
+
+## Phase 4: Tauri shell (controller, tray, flyout, bridge)
+
+Done, with two items left for the owner (below). Gate 4 evidence (Windows 11, taskbar at the bottom, 100% scale,
+checked visually with screenshots; `BUDS_FAKE=1` and the real Buds 4):
+
+- Tray icon appears (inside the hidden-icons popup here); left click opens the flyout above the icon, rounded
+  corners and shadow, 300 px wide, no taskbar entry. Esc and a click elsewhere hide it.
+- Debug flyout shows the live snapshot JSON; the ANC button changed the mode (Smart) and the tray tooltip followed:
+  `Buds Control · OnePlus Buds 4 / L 80% · R 82% · Case 45% / ANC · Smart`. With the real buds the snapshot shows
+  `connected`, `065414`, L/R 100%, transparency, bit 8.
+- A second launch exits at once and shows the running instance's flyout (one process stays).
+- Settings button opens the settings window (still the Phase 0 skeleton) and now closes the flyout first.
+- Unit tests: placement for bottom / top / left / right taskbars, clamping, negative-coordinate monitors, anchored
+  growth (9 tests); tooltip text and the 127-character cut (4); accent colour conversion.
+
+Not verified yet (needs the owner):
+- The right-click tray menu (mode check marks, Settings, Reconnect, Quit): the screen-control tool can't right-click.
+- Other geometry: taskbar on another edge, 150% scaling, a second monitor (the placement maths is unit-tested).
+
+Notes and deviations:
+- Module is `app_windows` (a `windows` module would clash with the `windows` crate).
+- Plugins: only single-instance for now; global-shortcut (Phase 8), autostart (Phase 7), clipboard (Phase 7) are
+  added with the phases that use them. Tray icon is the Tauri default until Phase 6.
+- Window effect: Acrylic is requested; it is not visibly translucent against the debug page's opaque background,
+  which Phase 5 replaces. Revisit there.
+- `channel` is `null` in the snapshot on Windows: `getpeername` does not return the SDP-resolved RFCOMM channel.
+  Cosmetic (Developer tab); investigate in Phase 9 together with `budsctl sdp`.
+- `BUDS_FAKE=1` runs the app against the simulated buds; settings and log are then in memory only.
