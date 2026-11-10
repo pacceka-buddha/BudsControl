@@ -95,6 +95,15 @@ pub fn place(icon: Option<Rect>, work: Rect, size: (i32, i32), margin: i32) -> P
     Placement { x, y, edge }
 }
 
+/// Top-left of the HUD window: horizontally centred in the work area, its bottom edge `lift` pixels
+/// above the work area's bottom.
+pub fn hud_position(work: Rect, size: (i32, i32), lift: i32) -> (i32, i32) {
+    (
+        work.x + (work.w - size.0) / 2,
+        work.bottom() - size.1 - lift,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -208,5 +217,17 @@ mod tests {
         // The icon lives inside the work area (the hidden-icons popup).
         let icon = Rect::new(1650, 900, 24, 24);
         assert_eq!(taskbar_edge(icon, WORK_BOTTOM), Edge::Bottom);
+    }
+
+    #[test]
+    fn the_hud_is_centred_above_the_bottom() {
+        let work = Rect::new(0, 0, 1920, 1032);
+        assert_eq!(hud_position(work, (340, 100), 120), (790, 812));
+        // On a second monitor with an offset.
+        let work = Rect::new(1920, -200, 2560, 1400);
+        assert_eq!(
+            hud_position(work, (340, 100), 120),
+            (1920 + 1110, 1200 - 220)
+        );
     }
 }

@@ -249,3 +249,49 @@ Left for the owner / noted:
   state is empty. Not shown anywhere yet; revisit in Phase 9 if wear detection is wanted.
 - RFCOMM channel still shows "-" (see Phase 4 notes).
 - Settings and the registry were restored to their previous values after testing.
+
+## Phase 8: global shortcuts + HUD
+
+Done. Gate 8 evidence (real app on Windows 11; shortcuts tested with the simulated buds for determinism, then with the
+real Buds 4; Notepad as "another app in front"):
+
+- Shortcuts: `tauri-plugin-global-shortcut`; combinations stored in `settings.shortcuts` as `Ctrl+Alt+KeyN`-style
+  strings (KeyboardEvent.code names, parsed by the plugin). A changed shortcut is registered at once; the four
+  actions are cycle / anc / transparency / off. Conflicts (another program owns the combination, or it doesn't
+  parse) are tracked per action and shown as "Used by another app - pick a different combination." with a red
+  outline.
+- Recorder (`ShortcutRecorder`): click, press the combination; Esc cancels, Backspace / Delete clears, a combination
+  needs a modifier unless it is an F-key (a plain key shakes and is refused), the plugin must accept it. While it
+  listens the app's own shortcuts are unregistered (verified: pressing the OLD combination while recording just
+  records it; no mode change, no popup). Pure helpers `interpret` / `display` have 7 vitest tests.
+- HUD: transparent, topmost, click-through, non-activating window, bottom centre of the monitor under the mouse
+  (pure `hud_position`, tested), 44 px icon badge + title + "<Level> level" or device name, fade in 150 ms / hold
+  1.4 s / fade out 300 ms, repeated presses restart it; "Buds not connected" variant. Window styles checked with
+  Win32: `WS_EX_TOPMOST`, `WS_EX_TRANSPARENT` (click-through), `WS_EX_NOACTIVATE`.
+- Verified on screen: with Notepad in front, Ctrl+Alt+N / Ctrl+Alt+T cycle the mode and show the popup at the bottom
+  centre; Notepad stayed the foreground window. After a full restart the saved shortcut worked on the very first
+  press (real buds). Conflict: a helper process owned Ctrl+Alt+F10 while the app re-registered, and the Off row showed
+  the conflict message (other rows unaffected).
+- Tests: 3 HUD payload tests, 1 positioning test, 7 recorder helper tests; all suites, clippy and svelte-check clean.
+
+Bugs found and fixed while testing (all would have shipped otherwise):
+1. DEADLOCK: recording a shortcut triggered two re-registrations at once (settings-changed task + the
+   `set_recording` command on the main thread). The plugin's calls hop through the main thread, so the whole UI froze.
+   All (re-)registration now goes through one worker task fed by a channel (requests coalesce, `set_recording` is
+   async and waits for completion); the settings-window destroy hook spawns instead of calling directly.
+2. Recorder race: the key listener was attached only after the async "pause shortcuts" call returned, so a quick key
+   press was missed. It now listens first.
+3. Focus theft: creating the HUD webview window on the first shortcut press took the keyboard focus from the app the
+   user was typing in. The HUD window is now created (hidden) 2 s after start-up.
+4. Untruthful HUD: the controller applies a mode optimistically; the HUD read it before the buds' refusal arrived and
+   showed a mode the buds never switched to. The HUD now waits 300 ms for the buds' answer, so a refused change shows
+   the real mode.
+
+Left for the owner / noted:
+- The buds kept answering mode changes with status 0x0E (refused) during testing (see Phase 7 notes), so a real
+  audible switch by shortcut was not confirmed this session; the HUD now reports the refusal honestly. Please retry
+  with the buds worn / out of the case.
+- Win-key combinations ("Super") are accepted but Windows reserves most of them; the recorder doesn't warn.
+- No test on a second monitor or at 150% scaling (positioning maths is unit-tested).
+- Testing touched your Notepad window: two stray clicks moved its text cursor (no text changed, 662 characters before
+  and after); I minimised nothing and closed nothing. Settings file and registry restored.

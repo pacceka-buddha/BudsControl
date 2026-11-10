@@ -295,6 +295,16 @@ export function invoke(command: string, args: Record<string, unknown> = {}): Pro
     case 'set_autostart':
       autostart = args.enabled as boolean
       return Promise.resolve(autostart)
+    case 'get_conflicts':
+      return Promise.resolve(params.get('conflict') ? [params.get('conflict') as string] : [])
+    case 'set_recording':
+      break
+    case 'validate_shortcut':
+      return Promise.resolve(/^((Ctrl|Alt|Shift|Super)\+)*[A-Za-z0-9]+$/.test(args.accelerator as string))
+    case 'get_hud_pending':
+      return Promise.resolve(null)
+    case 'hud_done':
+      break
     case 'app_version':
       return Promise.resolve('0.1.0')
     case 'send_raw': {

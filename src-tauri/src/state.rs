@@ -36,9 +36,21 @@ impl Default for FlyoutState {
     }
 }
 
+/// What the HUD window shows, and bookkeeping for its hide timer.
+#[derive(Default)]
+pub struct HudState {
+    /// The latest payload, for a page that finishes loading after it was emitted.
+    pub pending: Option<crate::hud::HudPayload>,
+    pub counter: u64,
+    /// Bumped on every show; a hide timer only acts if no newer show happened.
+    pub generation: u64,
+}
+
 pub struct AppState {
     pub handle: ControllerHandle,
     pub flyout: Mutex<FlyoutState>,
+    pub hud: Mutex<HudState>,
+    pub hotkeys: crate::hotkeys::HotkeyState,
     /// Running against the simulated buds (`BUDS_FAKE=1`).
     pub fake: bool,
 }

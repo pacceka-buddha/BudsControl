@@ -5,6 +5,8 @@
 
 mod app_windows;
 mod commands;
+mod hotkeys;
+mod hud;
 mod positioning;
 mod state;
 mod theme;
@@ -21,7 +23,7 @@ use buds_core::settings::SettingsStore;
 use tauri::{AppHandle, Emitter, Manager, RunEvent};
 use tokio::sync::broadcast::error::RecvError;
 
-use crate::state::{AppState, FlyoutState};
+use crate::state::{AppState, FlyoutState, HudState};
 
 /// Quits the app: closes the link to the buds first.
 pub fn quit(app: &AppHandle) {
@@ -56,6 +58,7 @@ pub fn run() {
             Some(vec!["--background"]),
         ))
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(setup)
         .invoke_handler(tauri::generate_handler![
             commands::get_state,
@@ -79,6 +82,11 @@ pub fn run() {
             commands::get_autostart,
             commands::set_autostart,
             commands::app_version,
+            commands::set_recording,
+            commands::validate_shortcut,
+            commands::get_conflicts,
+            commands::hud_done,
+            commands::get_hud_pending,
             commands::export_log,
             commands::get_accent_color,
             commands::flyout_resize,
@@ -137,6 +145,8 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     app.manage(AppState {
         handle: handle.clone(),
         flyout: Mutex::new(FlyoutState::default()),
+        hud: Mutex::new(HudState::default()),
+        hotkeys: hotkeys::HotkeyState::new(),
         fake,
     });
     app_windows::create_flyout(app.handle())?;
@@ -144,6 +154,15 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     tray::update(app.handle(), &tray_state, &handle.snapshot());
     app.manage(tray_state);
 
+    // The HUD window is created in the background shortly after start-up (see `hud::prepare`).
+    let hud_app = app.handle().clone();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        let app = hud_app.clone();
+        let _ = hud_app.run_on_main_thread(move || hud::prepare(&app));
+    });
+    hotkeys::start(app.handle());
+    hotkeys::register_all(app.handle());
     forward_events(app.handle().clone(), &handle);
 
     // A manual launch shows the flyout once so the user sees where the app lives; the autostart
@@ -217,9 +236,15 @@ fn forward_events(app: AppHandle, handle: &ControllerHandle) {
     let mut settings_rx = handle.settings().subscribe();
     let settings_app = app.clone();
     tauri::async_runtime::spawn(async move {
+        let mut shortcuts = settings_rx.borrow().shortcuts.clone();
         while settings_rx.changed().await.is_ok() {
             let settings = settings_rx.borrow_and_update().clone();
             let _ = settings_app.emit("buds://settings", &settings);
+            // A changed shortcut takes effect at once.
+            if settings.shortcuts != shortcuts {
+                shortcuts = settings.shortcuts.clone();
+                hotkeys::register_all(&settings_app);
+            }
         }
     });
 

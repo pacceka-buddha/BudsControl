@@ -1,8 +1,11 @@
 <script lang="ts">
-  // Placeholder until global shortcuts arrive (Phase 8): lists the actions and any saved combination.
+  // Global keyboard shortcuts: cycle the modes, or jump straight to one, from any app.
+  import { api } from '../lib/api'
   import type { Settings } from '../lib/bindings/Settings'
   import Icon, { type IconName } from '../lib/components/Icon.svelte'
   import SettingRow from '../lib/components/SettingRow.svelte'
+  import ShortcutRecorder from '../lib/components/ShortcutRecorder.svelte'
+  import { app } from '../lib/stores.svelte'
 
   interface Props {
     settings: Settings
@@ -15,18 +18,33 @@
     { id: 'transparency', title: 'Transparency', icon: 'transparency' },
     { id: 'off', title: 'Off', icon: 'off' },
   ]
+
+  function set(action: string, accelerator: string | null) {
+    const next = { ...settings.shortcuts }
+    if (accelerator) next[action] = accelerator
+    else delete next[action]
+    void api.updateSettings({ shortcuts: next })
+  }
 </script>
 
 <div class="page">
   <div class="group">
     {#each actions as action (action.id)}
-      <SettingRow title={action.title}>
+      {@const conflict = app.conflicts.includes(action.id)}
+      <SettingRow title={action.title} description={conflict ? 'Used by another app — pick a different combination.' : undefined}>
         <span class="icon"><Icon name={action.icon} size={16} /></span>
-        <span class="combo" class:empty={!settings.shortcuts[action.id]}>{settings.shortcuts[action.id] ?? 'Not set'}</span>
+        <ShortcutRecorder
+          label={action.title}
+          value={settings.shortcuts[action.id] ?? null}
+          {conflict}
+          onchange={(accelerator) => set(action.id, accelerator)}
+        />
       </SettingRow>
     {/each}
   </div>
-  <p class="note">Global keyboard shortcuts (work in any app) can be recorded here in the next update.</p>
+  <p class="note">
+    Shortcuts work everywhere, even when Buds Control isn't in front. Include Ctrl, Alt, Shift or Win (or use an F-key).
+  </p>
 </div>
 
 <style>
@@ -44,23 +62,13 @@
     color: var(--text-2);
     display: grid;
   }
-  .combo {
-    min-width: 110px;
-    padding: 4px 12px;
-    text-align: center;
-    border: 1px solid var(--stroke);
-    border-radius: var(--radius-control);
-    background: var(--fill);
-    font-family: var(--font-mono);
-    font-size: 12px;
-  }
-  .combo.empty {
-    color: var(--text-3);
-    font-family: var(--font);
-  }
   .note {
     margin: 0;
     font-size: 12px;
     color: var(--text-2);
+  }
+  /* The conflict description is an error, not a hint. */
+  .group :global(.desc) {
+    color: var(--danger);
   }
 </style>

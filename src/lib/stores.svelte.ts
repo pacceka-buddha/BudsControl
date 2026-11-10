@@ -15,7 +15,9 @@ export const app = $state<{
   settings: Settings | null
   log: LogEntry[]
   fake: boolean
-}>({ snapshot: null, settings: null, log: [], fake: false })
+  /** Actions (`cycle`, `anc`, ...) whose shortcut another program already owns. */
+  conflicts: string[]
+}>({ snapshot: null, settings: null, log: [], fake: false, conflicts: [] })
 
 let started = false
 
@@ -30,16 +32,21 @@ export async function initStores(): Promise<void> {
     listen<Settings>('buds://settings', (payload) => {
       app.settings = payload
     }),
+    listen<string[]>('buds://conflicts', (payload) => {
+      app.conflicts = payload
+    }),
     listen<LogEntry[]>('buds://log', (payload) => {
       app.log = [...app.log, ...payload].slice(-LOG_LIMIT)
     }),
   ])
-  const [snapshot, settings, log, fake] = await Promise.all([
+  const [snapshot, settings, log, fake, conflicts] = await Promise.all([
     api.getState(),
     api.getSettings(),
     api.getLog(),
     api.isFake(),
+    api.getConflicts(),
   ])
+  app.conflicts = conflicts
   app.snapshot = snapshot
   app.settings = settings
   app.log = log

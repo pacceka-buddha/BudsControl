@@ -6,6 +6,7 @@ import type { AncLevel } from './bindings/AncLevel'
 import type { EarSide } from './bindings/EarSide'
 import type { Gesture } from './bindings/Gesture'
 import type { GestureAction } from './bindings/GestureAction'
+import type { HudPayload } from './bindings/HudPayload'
 import type { LogEntry } from './bindings/LogEntry'
 import type { NoiseMode } from './bindings/NoiseMode'
 import type { Settings } from './bindings/Settings'
@@ -40,6 +41,15 @@ export const api = {
   getAutostart: () => invoke<boolean>('get_autostart'),
   setAutostart: (enabled: boolean) => invoke<boolean>('set_autostart', { enabled }),
   appVersion: () => invoke<string>('app_version'),
+
+  /** The shortcut recorder is listening: no global shortcut fires meanwhile. */
+  setRecording: (recording: boolean) => invoke<void>('set_recording', { recording }),
+  validateShortcut: (accelerator: string) => invoke<boolean>('validate_shortcut', { accelerator }),
+  /** Actions whose shortcut could not be registered (another program owns it). */
+  getConflicts: () => invoke<string[]>('get_conflicts'),
+
+  hudDone: () => invoke<void>('hud_done'),
+  getHudPending: () => invoke<HudPayload | null>('get_hud_pending'),
 
   getAccentColor: () => invoke<string | null>('get_accent_color'),
   flyoutResize: (height: number) => invoke<void>('flyout_resize', { height }),

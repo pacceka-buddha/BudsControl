@@ -210,6 +210,16 @@ pub fn open_settings(app: &AppHandle) {
         .or_else(|_| builder().build());
     match built {
         Ok(window) => {
+            // If the window goes away while the recorder is listening, shortcuts must work again.
+            let handle = app.clone();
+            window.on_window_event(move |event| {
+                if matches!(event, WindowEvent::Destroyed) {
+                    let handle = handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        crate::hotkeys::set_recording(&handle, false).await;
+                    });
+                }
+            });
             let _ = window.set_focus();
         }
         Err(error) => eprintln!("could not open the settings window: {error}"),

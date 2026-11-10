@@ -151,6 +151,36 @@ pub fn app_version(app: AppHandle) -> String {
     app.package_info().version.to_string()
 }
 
+/// The shortcut recorder is listening (`true`) or finished (`false`).
+#[tauri::command]
+pub async fn set_recording(app: AppHandle, recording: bool) {
+    crate::hotkeys::set_recording(&app, recording).await;
+}
+
+/// Whether an accelerator such as `Ctrl+Alt+KeyN` can be used as a shortcut.
+#[tauri::command]
+pub fn validate_shortcut(accelerator: String) -> bool {
+    crate::hotkeys::is_valid(&accelerator)
+}
+
+/// Actions whose shortcut could not be registered.
+#[tauri::command]
+pub fn get_conflicts(app: AppHandle) -> Vec<String> {
+    crate::hotkeys::conflicts(&app)
+}
+
+/// The HUD page finished fading out.
+#[tauri::command]
+pub fn hud_done(app: AppHandle) {
+    crate::hud::hide(&app);
+}
+
+/// What the HUD should be showing (for a page that loaded after the event).
+#[tauri::command]
+pub fn get_hud_pending(app: AppHandle) -> Option<crate::hud::HudPayload> {
+    crate::hud::pending(&app)
+}
+
 /// The log as text, for the Copy button.
 #[tauri::command]
 pub fn export_log(state: State<AppState>) -> String {
