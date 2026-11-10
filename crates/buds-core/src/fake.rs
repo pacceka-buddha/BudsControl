@@ -63,7 +63,12 @@ impl Buds {
     }
 
     fn battery_payload(&self) -> Vec<u8> {
-        let mut p = vec![0x00, 0x03];
+        self.battery_payload_with(0x00)
+    }
+
+    /// `lead` is the status byte of a reply, or the push type (1) of a battery push.
+    fn battery_payload_with(&self, lead: u8) -> Vec<u8> {
+        let mut p = vec![lead, 0x03];
         for (i, (level, charging)) in self.battery.iter().enumerate() {
             p.push(i as u8 + 1);
             p.push(level | if *charging { 0x80 } else { 0 });
@@ -263,6 +268,18 @@ impl FakePlatform {
 
     pub fn set_battery(&self, left: (u8, bool), right: (u8, bool), case: (u8, bool)) {
         self.world().buds.battery = [left, right, case];
+    }
+
+    /// Like `set_battery`, and the buds announce it with a push, as real ones do when a level changes.
+    pub fn push_battery(&self, left: (u8, bool), right: (u8, bool), case: (u8, bool)) {
+        let (sink, payload) = {
+            let mut w = self.world();
+            w.buds.battery = [left, right, case];
+            (w.sink.clone(), w.buds.battery_payload_with(push::BATTERY))
+        };
+        if let Some(sink) = sink {
+            sink.data(Frame::new(cmd::STATUS_PUSH, 0, payload).encode());
+        }
     }
 
     // --- Observation ---

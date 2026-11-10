@@ -29,6 +29,10 @@ Design review without the app or the buds: `npm run dev`, then open
 disconnected, connecting, lowbattery, charging, finding, longeq, minimal, noanc). A built-in simulator answers the
 app's commands there. `npm test` runs the frontend unit tests.
 
+Development switches: `BUDS_FAKE=1` runs the app against simulated buds, `BUDS_FAKE_SWEEP=1` (with it) sweeps the
+battery level ten times a second, and `BUDS_TASKBAR_THEME=light|dark` forces the tray icon's colour. The icon
+contact sheet is regenerated with `cargo run -p buds-art --example contact_sheet -- docs/screenshots/tray-icons.png`.
+
 The original macOS app is cloned to `reference/upstream/` (gitignored) at commit `298d452` for porting.
 
 ## Credits

@@ -185,3 +185,28 @@ Deviations and limits:
 - While the app runs, `budsctl` can't talk to the buds (one control connection): Phase 9 adds the IPC.
 - Launching a second instance can show the flyout and have it hide again at once (the launching process takes the
   focus); a tray click is the normal path.
+
+## Phase 6: dynamic tray icon, tooltip, menu state
+
+Done. Gate 6 evidence:
+
+- `buds-art`: tiny-skia drawing of the earbuds glyph (same geometry as the app icon) inside a battery ring: arc
+  clockwise from 12 o'clock over a 28% track, glyph at 45% and no arc when disconnected, white on a dark taskbar and
+  black on a light one. 7 pixel-level unit tests (sizes, arc coverage at several angles, full / empty / unknown,
+  dimming, colour, transparent corners and left-right balance, straight alpha). The tests caught a real artefact:
+  translucent head and stem shapes stacked into a brighter joint, fixed by drawing the glyph as an opaque layer
+  and compositing it with the opacity.
+- Contact sheet `docs/screenshots/tray-icons.png`: every state at 16 / 20 / 24 / 32 px on dark and light, enlarged
+  8x without smoothing. Crisp at all four sizes (16 px is the busiest, still readable).
+- App: icon size is `round(16 x primary-monitor scale)` (16 / 20 / 24 / 32 at 100 / 125 / 150 / 200%), the colour
+  follows `SystemUsesLightTheme`, and it is redrawn only when level, link, size or colour change; every state
+  change and a 10 s timer re-check it. Unit tests for the spec (scale, disconnected, clamping).
+- On screen (100% scaling): the tray shows the ring icon instead of the Tauri logo; with `BUDS_TASKBAR_THEME=light`
+  the same icon turned black next to the light-on-dark neighbours.
+- Leak check: `BUDS_FAKE_SWEEP=1` changed the battery level ten times a second for 3 minutes (about 1,800 icon
+  redraws). GDI objects stayed at 20, USER objects at 34, handle count and working set (37 MB) were flat.
+  (The plan asked for 10 minutes of normal updates; this is a much heavier workload.)
+
+Not verified (needs the owner or other hardware): the icon at 125 / 150 / 200% on a real display, an actual switch of
+the Windows taskbar theme (the colour logic is exercised through the override), and the right-click menu's check
+marks and enabled state (the screen-control tool can't right-click; the code has been in place since Phase 4).

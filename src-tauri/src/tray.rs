@@ -2,6 +2,9 @@
 //! shows a menu with the three modes, Settings, Reconnect and Quit. The tooltip and the menu's check
 //! marks follow the controller's state.
 
+use std::sync::Mutex;
+
+use buds_art::{TrayIconSpec, render_tray_icon};
 use buds_core::controller::Snapshot;
 use buds_core::types::{LinkState, NoiseMode};
 use tauri::image::Image;
@@ -21,6 +24,8 @@ const TOOLTIP_MAX: usize = 127;
 /// Handles kept so the menu can be updated from state changes.
 pub struct TrayState {
     pub tray: TrayIcon,
+    /// What the icon currently shows; it is only redrawn when this changes.
+    shown: Mutex<Option<IconSpec>>,
     anc: CheckMenuItem<Wry>,
     transparency: CheckMenuItem<Wry>,
     off: CheckMenuItem<Wry>,
@@ -50,22 +55,16 @@ pub fn build(app: &AppHandle) -> tauri::Result<TrayState> {
         .item(&quit)
         .build()?;
 
-    let mut builder = TrayIconBuilder::with_id(TRAY_ID)
+    let builder = TrayIconBuilder::with_id(TRAY_ID)
         .tooltip("Buds Control")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| menu_event(app, event.id().as_ref()))
         .on_tray_icon_event(|tray, event| tray_event(tray.app_handle(), &event));
-    if let Some(icon) = app.default_window_icon() {
-        builder = builder.icon(Image::new_owned(
-            icon.rgba().to_vec(),
-            icon.width(),
-            icon.height(),
-        ));
-    }
     let tray = builder.build(app)?;
     Ok(TrayState {
         tray,
+        shown: Mutex::new(None),
         anc,
         transparency,
         off,
@@ -101,8 +100,44 @@ fn menu_event(app: &AppHandle, id: &str) {
     }
 }
 
-/// Brings the tooltip and the menu in line with the buds' state.
-pub fn update(state: &TrayState, snapshot: &Snapshot) {
+/// Pixels per side of a tray icon at 100% scaling.
+const BASE_ICON_SIZE: f64 = 16.0;
+
+/// What the icon should look like right now.
+type IconSpec = TrayIconSpec;
+
+/// The icon for `snapshot` on a display with `scale` and a light or dark taskbar.
+pub fn icon_spec(snapshot: &Snapshot, scale: f64, light_taskbar: bool) -> IconSpec {
+    let connected = snapshot.link == LinkState::Connected;
+    TrayIconSpec {
+        // Windows draws tray icons at 16 px at 100%, 20 at 125%, 24 at 150%, 32 at 200%: render at
+        // exactly that size so nothing is resampled.
+        size: (BASE_ICON_SIZE * scale).round().clamp(16.0, 64.0) as u32,
+        level: connected.then_some(snapshot.buds_battery).flatten(),
+        connected,
+        light_taskbar,
+    }
+}
+
+/// Brings the icon, the tooltip and the menu in line with the buds' state, the display scale and the
+/// taskbar colour. The icon is only redrawn when it would look different.
+pub fn update(app: &AppHandle, state: &TrayState, snapshot: &Snapshot) {
+    let scale = app
+        .primary_monitor()
+        .ok()
+        .flatten()
+        .map_or(1.0, |m| m.scale_factor());
+    let spec = icon_spec(snapshot, scale, crate::theme::taskbar_is_light());
+    {
+        let mut shown = state.shown.lock().unwrap();
+        if *shown != Some(spec) {
+            let image = render_tray_icon(spec);
+            let icon = Image::new_owned(image.rgba, image.width, image.height);
+            if state.tray.set_icon(Some(icon)).is_ok() {
+                *shown = Some(spec);
+            }
+        }
+    }
     let _ = state.tray.set_tooltip(Some(tooltip(snapshot)));
     let connected = snapshot.link == LinkState::Connected;
     for (item, mode) in [
@@ -179,6 +214,30 @@ mod tests {
         s.mode = Some(NoiseMode::Anc);
         s.level = Some(AncLevel::Max);
         s
+    }
+
+    #[test]
+    fn icon_follows_state_scale_and_taskbar() {
+        let mut s = connected();
+        s.buds_battery = Some(80);
+        let spec = icon_spec(&s, 1.0, false);
+        assert_eq!(
+            (spec.size, spec.level, spec.connected, spec.light_taskbar),
+            (16, Some(80), true, false)
+        );
+        assert_eq!(icon_spec(&s, 1.25, true).size, 20);
+        assert_eq!(icon_spec(&s, 1.5, true).size, 24);
+        assert_eq!(icon_spec(&s, 2.0, true).size, 32);
+        assert!(icon_spec(&s, 1.5, true).light_taskbar);
+        // Disconnected: dimmed, and the (stale) battery level is not shown.
+        let mut off = s.clone();
+        off.link = LinkState::Searching;
+        let spec = icon_spec(&off, 1.0, false);
+        assert!(!spec.connected);
+        assert_eq!(spec.level, None);
+        // Absurd scales stay in range.
+        assert_eq!(icon_spec(&s, 0.5, false).size, 16);
+        assert_eq!(icon_spec(&s, 10.0, false).size, 64);
     }
 
     #[test]

@@ -106,7 +106,11 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let handle = if fake {
-        spawn_controller(FakePlatform::new(), settings, log)
+        let platform = FakePlatform::new();
+        if std::env::var("BUDS_FAKE_SWEEP").is_ok_and(|v| !v.is_empty() && v != "0") {
+            sweep_battery(platform.clone());
+        }
+        spawn_controller(platform, settings, log)
     } else {
         #[cfg(windows)]
         {
@@ -127,7 +131,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     });
     app_windows::create_flyout(app.handle())?;
     let tray_state = tray::build(app.handle())?;
-    tray::update(&tray_state, &handle.snapshot());
+    tray::update(app.handle(), &tray_state, &handle.snapshot());
     app.manage(tray_state);
 
     forward_events(app.handle().clone(), &handle);
@@ -144,6 +148,29 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Development aid (`BUDS_FAKE=1 BUDS_FAKE_SWEEP=1`): the simulated buds' battery sweeps up and down
+/// ten times a second, so the tray icon is redrawn constantly (used to check it doesn't leak).
+fn sweep_battery(platform: FakePlatform) {
+    tauri::async_runtime::spawn(async move {
+        let mut level: i32 = 100;
+        let mut step: i32 = -1;
+        let mut tick = tokio::time::interval(Duration::from_millis(100));
+        loop {
+            tick.tick().await;
+            level += step;
+            if !(1..=99).contains(&level) {
+                step = -step;
+            }
+            let l = level as u8;
+            platform.push_battery(
+                (l, false),
+                (l.saturating_add(1).min(100), false),
+                (50, false),
+            );
+        }
+    });
+}
+
 /// Pushes controller state, settings and packet-log batches to the web UI, and keeps the tray current.
 fn forward_events(app: AppHandle, handle: &ControllerHandle) {
     // Controller state -> `buds://state` + tray.
@@ -153,10 +180,26 @@ fn forward_events(app: AppHandle, handle: &ControllerHandle) {
         loop {
             let snapshot = state_rx.borrow_and_update().clone();
             let _ = state_app.emit("buds://state", &snapshot);
-            tray::update(&state_app.state::<tray::TrayState>(), &snapshot);
+            tray::update(&state_app, &state_app.state::<tray::TrayState>(), &snapshot);
             if state_rx.changed().await.is_err() {
                 break;
             }
+        }
+    });
+
+    // The taskbar colour and the display scale can change without the buds' state changing (the user
+    // switches Windows to light mode, moves to a monitor with another scaling): look again regularly.
+    let icon_app = app.clone();
+    let icon_handle = handle.clone();
+    tauri::async_runtime::spawn(async move {
+        let mut tick = tokio::time::interval(Duration::from_secs(10));
+        loop {
+            tick.tick().await;
+            tray::update(
+                &icon_app,
+                &icon_app.state::<tray::TrayState>(),
+                &icon_handle.snapshot(),
+            );
         }
     });
 

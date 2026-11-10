@@ -130,6 +130,30 @@ async fn connects_and_reads_the_buds() {
     );
 }
 
+#[tokio::test(start_paused = true)]
+async fn battery_pushes_update_the_state() {
+    let r = connected_rig().await;
+    r.fake.push_battery((64, true), (70, false), (0, false));
+    secs(0.1).await;
+    let s = r.snap();
+    assert_eq!(
+        s.left,
+        Some(Battery {
+            level: 64,
+            charging: true
+        })
+    );
+    assert_eq!(
+        s.right,
+        Some(Battery {
+            level: 70,
+            charging: false
+        })
+    );
+    assert_eq!(s.case, None, "an empty, idle case is shown as unknown");
+    assert_eq!(s.buds_battery, Some(64));
+}
+
 // ---------------------------------------------------------------- mode switching
 
 #[tokio::test(start_paused = true)]
