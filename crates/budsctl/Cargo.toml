@@ -9,3 +9,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+buds-bt = { version = "0.1.0", path = "../buds-bt" }
+buds-core = { version = "0.1.0", path = "../buds-core", features = ["fake"] }
+clap = { version = "4.6.7", features = ["derive"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "time", "macros"] }

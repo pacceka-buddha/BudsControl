@@ -52,6 +52,16 @@ pub fn format_address(address: &[u8; 6]) -> String {
         .join(":")
 }
 
+/// Name fragments of OnePlus, OPPO, realme (and DIZO) buds. A bare "buds" isn't enough, so other
+/// makers' earbuds are left alone.
+const BRAND_WORDS: [&str; 5] = ["oneplus", "oppo", "enco", "realme", "dizo"];
+
+/// Whether a Bluetooth device name looks like OnePlus / OPPO / realme buds.
+pub fn name_looks_like_buds(name: &str) -> bool {
+    let name = name.to_lowercase();
+    BRAND_WORDS.iter().any(|word| name.contains(word))
+}
+
 /// Opening the control channel failed (every candidate was tried). The text is for the log.
 #[derive(Debug, Clone)]
 pub struct OpenError(pub String);

@@ -75,3 +75,28 @@ Design notes and deviations from the Swift code:
 - A new log line "retrying in Ns" is written on every retry (useful in the packet log; the tests rely on it).
 - `Platform::open` takes the last working candidate as `hint`, and `Platform::wall_time` is overridable so tests can
   simulate sleep.
+
+## Phase 3: Windows Bluetooth backend + budsctl
+
+**Code complete; Gate 3 (real Buds 4) is PENDING** - see `docs/TESTING.md`, section "Gate 3". Not marked done.
+
+What exists:
+- `crates/buds-bt`: `plan.rs` (OS-independent candidate walk: last working candidate, HeyMelody 079A, 1107, SPP only if
+  both "not found", channels 15/12/13 only if all "not found"; a timeout or host-down on a service ends the walk;
+  9 unit tests) and `win/` (device list via `BluetoothFindFirstDevice` with no inquiry; RFCOMM through Winsock
+  `AF_BTH`: connect with a per-candidate timeout on its own thread, cancellable when the controller drops the
+  open, reader thread that owns closing the socket, peer channel via `getpeername`, page = connect to 079A and
+  drop). Directory is `win/` rather than the plan's `windows/` to avoid clashing with the `windows` crate name.
+- `crates/budsctl`: `budsctl [--fake] [--direct] <command>` with every CLI command of `buds_core::cli`, plus
+  `devices` (paired devices). Real runs share `%APPDATA%\BudsControl\settings.json` and log to
+  `%LOCALAPPDATA%\BudsControl\BudsControl.log`. `--direct` is accepted but is the only mode until Phase 9.
+- `buds_core::paths` (settings/log locations) and `platform::name_looks_like_buds`.
+
+Verified without the buds being connected:
+- `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `npm run check` clean.
+- `budsctl --fake status|max|devices` print the expected output.
+- Real Bluetooth, read-only: `budsctl devices` lists "OnePlus Buds 4" (paired, not connected) and a Sony WH-CH720N;
+  `budsctl status` with the buds out of reach pages them, times out after 5 s, backs off 1,2,3,5 s, prints the
+  not-connected block and exits 1. The log file is written.
+
+Not verified yet (needs the connected buds): which candidate connects, replies, mode switching, etc.

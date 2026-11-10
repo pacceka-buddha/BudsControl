@@ -10,6 +10,7 @@ pub mod encode;
 pub mod fake;
 pub mod packet_log;
 pub mod parse;
+pub mod paths;
 pub mod platform;
 pub mod protocol;
 pub mod settings;

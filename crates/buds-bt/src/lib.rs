@@ -1,1 +1,19 @@
-//! Per-OS Bluetooth backends implementing `buds_core::Platform`. Windows arrives in Phase 3.
+//! Per-OS Bluetooth backends implementing `buds_core::platform::Platform`.
+//!
+//! Windows (Phase 3) is implemented; Linux (Phase 11) and macOS (Phase 12) follow. The candidate
+//! ordering (`plan`) is shared and has no OS dependency.
+
+pub mod plan;
+
+#[cfg(windows)]
+mod win;
+
+#[cfg(windows)]
+pub use win::WindowsPlatform;
+
+/// The backend for the OS this was built for, if there is one yet.
+#[cfg(windows)]
+pub type NativePlatform = WindowsPlatform;
+
+/// Whether this build has a native Bluetooth backend.
+pub const HAS_NATIVE_BACKEND: bool = cfg!(windows);

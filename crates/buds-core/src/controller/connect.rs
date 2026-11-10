@@ -12,10 +12,6 @@ use tokio::time::Instant;
 use super::*;
 use crate::platform::LinkSink;
 
-/// Name fragments of OnePlus, OPPO, realme (and DIZO) buds. A bare "buds" isn't enough, so other
-/// makers' earbuds are left alone.
-const BRAND_WORDS: [&str; 5] = ["oneplus", "oppo", "enco", "realme", "dizo"];
-
 impl<P: Platform> Controller<P> {
     /// Either they advertise the HeyMelody service (which also catches renamed buds), or their name
     /// carries the brand, or we have talked to this address before.
@@ -23,8 +19,11 @@ impl<P: Platform> Controller<P> {
         if device.has_control_service {
             return true;
         }
-        let name = device.name.as_deref().unwrap_or("").to_lowercase();
-        if BRAND_WORDS.iter().any(|word| name.contains(word)) {
+        if device
+            .name
+            .as_deref()
+            .is_some_and(crate::platform::name_looks_like_buds)
+        {
             return true;
         }
         let address = device.address_string();
