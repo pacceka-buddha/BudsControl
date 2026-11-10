@@ -111,3 +111,13 @@ Not verified yet (needs the connected buds): which candidate connects, replies, 
 - Case battery is not reported while the buds are out of the case (`case -1%`), the UI will show "-".
 - Still for the owner (audible / physical): 3.3-3.5 (mode and level switching, watching pushes while using the buds),
   3.7-3.11 (EQ, custom EQ, low latency, find, gesture), 3.12 (buds in the case -> exit 1).
+
+### Gate 3, second hardware run, 2026-11-10 (run by Claude; original settings restored afterwards)
+
+Passed, each change read back by a fresh `budsctl` session: Off / Transparency / ANC, every ANC level (Smart bit 7,
+Max 4, Moderate 5, Mild 6, Adaptive 11; Off reads back as bit 3, Transparency as 8), EQ presets 1 / 2 / 0, custom EQ
+band write (Custom1, then reset to flat), low latency on/off, gesture write (left double tap next, then restored).
+Final state equals the starting state (Transparency, preset 0, low latency off, left previous / right next).
+
+Still open, needs the owner: 3.5 (pushes while using the buds), 3.10 (find, loud: buds out of ears), 3.11 (a real
+double tap), 3.12 (buds in the case -> exit 1), and confirming by ear that the modes audibly change.
