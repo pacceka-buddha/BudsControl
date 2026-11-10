@@ -161,6 +161,13 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         let app = hud_app.clone();
         let _ = hud_app.run_on_main_thread(move || hud::prepare(&app));
     });
+    // `budsctl` talks to this running app instead of opening its own connection to the buds.
+    let ipc_handle = handle.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Err(error) = buds_core::ipc::serve(ipc_handle).await {
+            eprintln!("command-line control is unavailable: {error}");
+        }
+    });
     hotkeys::start(app.handle());
     hotkeys::register_all(app.handle());
     forward_events(app.handle().clone(), &handle);

@@ -98,6 +98,13 @@ impl ConnectError {
     pub fn is_not_found(&self) -> bool {
         matches!(self.code, 10108 | 10049 | 10022)
     }
+
+    /// The service exists but its one connection is taken (Winsock 10048 `WSAEADDRINUSE`): another
+    /// program, or a connection of ours that the buds haven't released yet. Trying the other
+    /// services would only find unrelated ones, so the walk ends and the controller retries later.
+    pub fn is_busy(&self) -> bool {
+        self.code == 10048
+    }
 }
 
 impl fmt::Display for ConnectError {
@@ -140,7 +147,7 @@ pub fn walk<T>(
     if let Some(candidate) = hint.and_then(Candidate::from_name) {
         match attempt(candidate, &mut log) {
             Some(Ok(value)) => return Ok((candidate, value)),
-            Some(Err(e)) if e.cancelled => return Err(e),
+            Some(Err(e)) if e.cancelled || e.is_busy() => return Err(e),
             _ => {}
         }
     }
@@ -309,6 +316,24 @@ mod tests {
                 .count(),
             1
         );
+    }
+
+    #[test]
+    fn a_busy_control_service_ends_the_walk_instead_of_finding_unrelated_services() {
+        let busy = ConnectError {
+            code: 10048,
+            message: "address in use".into(),
+            timed_out: false,
+            cancelled: false,
+        };
+        // Without a hint: 079A busy -> stop (never reaches the serial port service).
+        let (tried, result) = run(None, |_| Err(busy.clone()));
+        assert_eq!(tried, [Candidate::HeyMelody]);
+        assert_eq!(result.unwrap_err().code, 10048);
+        // With a hint: the same.
+        let (tried, result) = run(Some("heymelody"), |_| Err(busy.clone()));
+        assert_eq!(tried, [Candidate::HeyMelody]);
+        assert!(result.is_err());
     }
 
     #[test]

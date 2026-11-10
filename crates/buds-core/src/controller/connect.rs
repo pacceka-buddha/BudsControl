@@ -157,16 +157,15 @@ impl<P: Platform> Controller<P> {
             }
             Ok(link) => {
                 self.channel_id = link.channel();
-                let hint = link.connect_hint();
+                // Remembered only once the buds answer: a service that accepts the connection but
+                // stays silent is not the control channel.
+                self.pending_hint = link.connect_hint();
                 self.link_handle = Some(link);
                 self.current_link = link_id;
                 if let Some(address) = self.address.clone() {
                     self.settings.update(|s| {
                         if !s.known_buds.contains(&address) {
-                            s.known_buds.push(address.clone());
-                        }
-                        if let Some(hint) = hint {
-                            s.connect_hints.insert(address, hint);
+                            s.known_buds.push(address);
                         }
                     });
                 }
@@ -225,6 +224,7 @@ impl<P: Platform> Controller<P> {
         }
         self.current_link = 0;
         self.channel_id = None;
+        self.pending_hint = None;
         self.parser = FrameParser::new();
         self.outstanding_noise_queries.clear();
         self.stale_noise_queries.clear();

@@ -45,7 +45,11 @@ enum Command {
 
 /// Runs one command line against a controller, writing its output to `out`. Returns the process
 /// exit code (0 = success).
-pub async fn execute(handle: &ControllerHandle, args: &[String], out: &mut dyn Write) -> i32 {
+pub async fn execute(
+    handle: &ControllerHandle,
+    args: &[String],
+    out: &mut (dyn Write + Send),
+) -> i32 {
     let command = match parse_args(args) {
         Ok(c) => c,
         Err(message) => {
@@ -81,7 +85,7 @@ pub async fn execute(handle: &ControllerHandle, args: &[String], out: &mut dyn W
     exit
 }
 
-fn echo_entry(out: &mut dyn Write, echo: Echo, started: Instant, entry: &LogEntry) {
+fn echo_entry(out: &mut (dyn Write + Send), echo: Echo, started: Instant, entry: &LogEntry) {
     let elapsed = started.elapsed().as_secs_f64();
     let stamp = match echo {
         Echo::Off => return,
@@ -180,10 +184,13 @@ async fn control(handle: &ControllerHandle, action: &str, print: &Printer) -> i3
     } else if let Some(level) = AncLevel::from_key(action) {
         handle.set_mode(NoiseMode::Anc, Some(level));
     }
+    // Attached to a controller that has been running for a while (the tray app), everything is
+    // already known: no need to wait for the start-up replies.
+    let running = is_ready(&handle.snapshot());
     handle.start();
 
     let ready = wait_for(handle, Duration::from_secs(8), is_ready).await;
-    if ready {
+    if ready && !running {
         // Remaining start-up replies (EQ, gestures, switches) arrive right behind the first ones.
         sleep(Duration::from_millis(800)).await;
     }
@@ -227,8 +234,10 @@ async fn control(handle: &ControllerHandle, action: &str, print: &Printer) -> i3
             }
         }
     }
-    // Give the buds a moment to apply and confirm before reading the state back.
-    sleep(if ready {
+    // Give the buds a moment to apply and confirm before reading the state back (a plain `status`
+    // changed nothing, so there is nothing to wait for).
+    let changed = action != "status";
+    sleep(if ready && changed {
         Duration::from_millis(1200)
     } else {
         Duration::ZERO

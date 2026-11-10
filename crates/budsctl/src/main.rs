@@ -33,12 +33,16 @@ Commands:
   scan [label]            send every query once and print the last reply to each
   raw CMD:PAYLOAD ...     send raw commands (hex), e.g. raw 0106 010C:0101
   devices                 list the paired Bluetooth devices
+  sdp                     show which control services the buds advertise, and their RFCOMM channels
+  audio [reconnect]       list the buds' Windows audio endpoints; `reconnect` asks the audio driver
+                          to (re)connect them
 ";
 
 #[derive(Parser)]
 #[command(name = "budsctl", version, about = "Control OnePlus / OPPO / realme earbuds from the command line", after_help = COMMANDS)]
 struct Args {
-    /// Talk to the buds directly even if the tray app is running (the only mode for now).
+    /// Talk to the buds directly even if the tray app is running (otherwise a running app is asked to
+    /// do it, since the buds allow only one control connection).
     #[arg(long)]
     direct: bool,
     /// Use simulated OnePlus Buds 4 instead of real Bluetooth.
@@ -72,6 +76,22 @@ fn main() -> ExitCode {
 }
 
 async fn run(args: Args) -> i32 {
+    // Commands that need the buds' control connection go to the running tray app, if there is one.
+    let local_only = matches!(
+        args.command.first().map(String::as_str),
+        Some("devices" | "sdp" | "audio")
+    );
+    if !args.fake && !args.direct && !local_only {
+        let mut stdout = std::io::stdout();
+        match buds_core::ipc::forward(&args.command, &mut stdout).await {
+            Some(Ok(code)) => return code,
+            Some(Err(error)) => {
+                eprintln!("budsctl: the running app stopped answering: {error}");
+                return 1;
+            }
+            None => {} // no app running: talk to the buds ourselves
+        }
+    }
     if args.fake {
         return with_platform(
             buds_core::fake::FakePlatform::new(),
@@ -111,6 +131,13 @@ async fn with_platform<P: Platform>(
     if args.command.first().map(String::as_str) == Some("devices") {
         return list_devices(&platform.paired_devices().await);
     }
+    if args.command.first().map(String::as_str) == Some("sdp") {
+        return show_services(&platform.paired_devices().await);
+    }
+    if args.command.first().map(String::as_str) == Some("audio") {
+        let reconnect = args.command.get(1).map(String::as_str) == Some("reconnect");
+        return show_audio(&platform.paired_devices().await, reconnect);
+    }
     let handle = spawn(platform, settings, log);
     let mut stdout = std::io::stdout();
     let code = cli::execute(&handle, &args.command, &mut stdout).await;
@@ -118,6 +145,66 @@ async fn with_platform<P: Platform>(
     handle.shutdown();
     tokio::time::sleep(Duration::from_millis(150)).await; // let the link close
     code
+}
+
+/// `budsctl sdp`: the control services of the paired buds (a connected one is preferred).
+#[cfg(windows)]
+fn show_services(devices: &[BtDevice]) -> i32 {
+    let buds = devices
+        .iter()
+        .filter(|d| name_looks_like_buds(d.name.as_deref().unwrap_or("")))
+        .max_by_key(|d| d.connected);
+    let Some(device) = buds else {
+        eprintln!("budsctl: no paired earbuds found (see `budsctl devices`)");
+        return 1;
+    };
+    println!(
+        "{} {}",
+        device.address_string(),
+        device.name.as_deref().unwrap_or("(unnamed)")
+    );
+    for line in buds_bt::sdp_report(device.address) {
+        println!("  {line}");
+    }
+    0
+}
+
+#[cfg(not(windows))]
+fn show_services(_devices: &[BtDevice]) -> i32 {
+    eprintln!("budsctl: service discovery is not available on this platform yet");
+    3
+}
+
+/// `budsctl audio [reconnect]`: the buds' audio endpoints; optionally ask the driver to reconnect them.
+#[cfg(windows)]
+fn show_audio(devices: &[BtDevice], reconnect: bool) -> i32 {
+    let Some(device) = devices
+        .iter()
+        .filter(|d| name_looks_like_buds(d.name.as_deref().unwrap_or("")))
+        .max_by_key(|d| d.connected)
+    else {
+        eprintln!("budsctl: no paired earbuds found (see `budsctl devices`)");
+        return 1;
+    };
+    for line in buds_bt::audio_report(device.address) {
+        println!("{line}");
+    }
+    if reconnect {
+        match buds_bt::audio_reconnect(device.address) {
+            Ok(count) => println!("reconnect requested ({count} audio device)"),
+            Err(reason) => {
+                eprintln!("budsctl: reconnect failed: {reason}");
+                return 1;
+            }
+        }
+    }
+    0
+}
+
+#[cfg(not(windows))]
+fn show_audio(_devices: &[BtDevice], _reconnect: bool) -> i32 {
+    eprintln!("budsctl: audio reconnect is not available on this platform yet");
+    3
 }
 
 fn list_devices(devices: &[BtDevice]) -> i32 {

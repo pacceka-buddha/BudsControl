@@ -251,6 +251,10 @@ pub struct Controller<P: Platform> {
     last_page: Option<Instant>,
     last_wall: SystemTime,
     timer_gen: HashMap<TimerKind, u64>,
+    /// `Action::Start` has been handled.
+    started: bool,
+    /// How this link was reached; saved as the connection hint when the buds first answer.
+    pending_hint: Option<String>,
 
     // --- Remembered settings / queued work ---
     restore_noise: bool,
@@ -325,6 +329,8 @@ impl<P: Platform> Controller<P> {
             last_page: None,
             last_wall,
             timer_gen: HashMap::new(),
+            started: false,
+            pending_hint: None,
             restore_noise: false,
             restore_low_latency: false,
             noise_fresh: false,
@@ -485,6 +491,10 @@ impl<P: Platform> Controller<P> {
     // MARK: - Public operations (ported from the Swift API)
 
     fn start(&mut self) {
+        if self.started {
+            return; // a second client (budsctl asking the running app) must not restart anything
+        }
+        self.started = true;
         self.connect();
         self.schedule(TimerKind::Poll, POLL_INTERVAL);
         self.schedule(TimerKind::Health, HEALTH_INTERVAL);

@@ -10,6 +10,11 @@ use crate::protocol::{feature, push, reply};
 impl<P: Platform> Controller<P> {
     pub(super) fn received(&mut self, bytes: &[u8]) {
         self.last_received = Some(Instant::now());
+        if let (Some(hint), Some(address)) = (self.pending_hint.take(), self.address.clone()) {
+            self.settings.update(|s| {
+                s.connect_hints.insert(address, hint);
+            });
+        }
         self.log.append(LogDirection::Received, &to_hex(bytes));
         for frame in self.parser.feed(bytes) {
             self.handle_frame(frame);

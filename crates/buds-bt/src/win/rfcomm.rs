@@ -22,12 +22,12 @@ use super::devices::address_u64;
 use crate::plan::{Candidate, ConnectError};
 
 /// HeyMelody control service UUIDs; the buds advertise one or the other.
-const HEYMELODY: GUID = GUID::from_u128(0x0000079A_D102_11E1_9B23_00025B00A5A5);
-const HEYMELODY_ALT: GUID = GUID::from_u128(0x00001107_D102_11E1_9B23_00025B00A5A5);
+pub(super) const HEYMELODY: GUID = GUID::from_u128(0x0000079A_D102_11E1_9B23_00025B00A5A5);
+pub(super) const HEYMELODY_ALT: GUID = GUID::from_u128(0x00001107_D102_11E1_9B23_00025B00A5A5);
 /// Standard Serial Port Profile.
-const SPP: GUID = GUID::from_u128(0x00001101_0000_1000_8000_00805F9B34FB);
+pub(super) const SPP: GUID = GUID::from_u128(0x00001101_0000_1000_8000_00805F9B34FB);
 
-fn init_winsock() {
+pub(super) fn init_winsock() {
     static INIT: Once = Once::new();
     INIT.call_once(|| {
         let mut data = WSADATA::default();
@@ -144,7 +144,10 @@ pub fn connect_candidate(
                 sock,
                 channel: peer_channel(sock).or(match candidate {
                     Candidate::Channel(n) => Some(n),
-                    _ => None,
+                    // Winsock did the lookup itself; ask again so the Developer tab can show it.
+                    Candidate::HeyMelody => super::sdp::channel_of(address, HEYMELODY),
+                    Candidate::HeyMelodyAlt => super::sdp::channel_of(address, HEYMELODY_ALT),
+                    Candidate::Spp => super::sdp::channel_of(address, SPP),
                 }),
             })
         }

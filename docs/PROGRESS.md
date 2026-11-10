@@ -295,3 +295,49 @@ Left for the owner / noted:
 - No test on a second monitor or at 150% scaling (positioning maths is unit-tested).
 - Testing touched your Notepad window: two stray clicks moved its text cursor (no text changed, 662 characters before
   and after); I minimised nothing and closed nothing. Settings file and registry restored.
+
+## Phase 9: reconnect polish, IPC, diagnostics
+
+Done (hardware-dependent reconnect checks are left for the owner, see docs/TESTING.md). Evidence (Windows 11,
+OnePlus Buds 4 connected to this PC):
+
+- **IPC (`budsctl` <-> running app).** `crates/buds-core/src/ipc.rs`: a local socket (named pipe
+  `\.\pipe\budscontrol-<USERNAME>`, via `interprocess`), one JSON line request `{"args":[...]}`, answered with
+  `{"line":"..."}` lines and `{"exit":N}`. The server runs the very same `cli::execute` on the live controller, so the
+  output is identical to a direct run. `budsctl` forwards everything except `devices`, `sdp` and `audio` (which need no
+  control connection) unless `--direct`/`--fake`; if nothing listens (800 ms) it talks to the buds itself. The app starts
+  the server at start-up (failure is logged, never fatal). 5 integration tests (status, a mode command changes the running
+  controller and sends exactly one command, exit codes, 3 clients at once, no app -> `None`) plus 3 unit tests.
+  - Verified with the real app (debug build) running: `budsctl status`, `anc`, `transparency` answered by the app
+    (exit 0, same block as a direct run, the app's own packet log). `budsctl --direct status` while the app held the
+    control connection fails with Winsock 10048 (address in use): the buds allow one connection, which is exactly why
+    the IPC exists.
+  - Side effects: a second `Start` is ignored by the controller (a late client must not restart the connection);
+    `budsctl status` no longer waits 1.2 s when nothing changed.
+- **Service discovery (`budsctl sdp`).** `crates/buds-bt/src/win/sdp.rs` uses `WSALookupServiceBegin/Next` (`NS_BTH`).
+  Real buds: `HeyMelody 079A: enco link, channel 15`, `1107: none`, `Serial port 1101: RFCOMM COM channel 17, WATCH
+  channel 29, enco link channel 15`. Lookup is also used to fill the channel the Developer tab shows when Winsock's
+  `getpeername` has none (a connection logs `connected via HeyMelody service 079A (channel 15)`).
+- **Audio reconnect.** `crates/buds-bt/src/win/audio.rs`: enumerates render + capture endpoints (all states), follows
+  `IDeviceTopology` connector 0 -> `GetDeviceIdConnectedTo`, keeps those whose Bluetooth filter id contains the buds
+  address (12 hex digits), then `IKsControl::KsProperty` with `KSPROPSETID_BtAudio` id 0 (one-shot reconnect). It is
+  now the first step of `WindowsPlatform::page()`; when it is unavailable the Phase 3 RFCOMM page is used. Diagnostics:
+  `budsctl audio` (lists endpoints) and `budsctl audio reconnect`. Real buds: one render endpoint (A2DP sink 110B),
+  state active, no capture endpoint (no hands-free profile on this PC); `audio reconnect` accepted (1 audio device),
+  exit 0, buds stayed connected.
+
+Bugs found and fixed while testing:
+1. A force-killed app left the buds' control service busy for a short time. `budsctl --direct` then got 10048 on 079A,
+   the walk went on to the serial port service, "succeeded" on the unrelated `RFCOMM COM` channel 17 (no answer, product
+   id `[?]`) **and saved `spp` as the connection hint**, so later connects kept going to the wrong service. Fixes:
+   a busy service (10048) now ends the walk (the controller retries later) and the hint is only saved after the buds
+   have actually sent something. New unit test for the busy case. The poisoned hint in my settings file was reset to
+   `heymelody`; afterwards a direct connect used 079A, channel 15.
+
+Left for the owner / noted:
+- Phone-only reconnect (buds playing to the phone, PC asks them to join), the setting being off, and sleep/wake recovery
+  need the real situation; they are in docs/TESTING.md (checks 12 and 13).
+- I could not confirm that the audio reconnect call by itself pulls the buds over from the phone (the buds were already
+  connected here); if it does not, the RFCOMM fallback only runs when the audio call errors, so report it.
+- The buds kept refusing mode changes (0x0E) in this session (case battery -1%, probably in the case or idle), so
+  `anc` over IPC reached the buds and came back refused; the plumbing is what was verified.

@@ -55,6 +55,19 @@ The same text is in `%LOCALAPPDATA%\BudsControl\BudsControl.log`. **If no candid
 | 19 | Tray icon ring / dim / theme; tooltip | |
 | 20 | DPI 100 / 150 / 200 %, two monitors, taskbar at top / left: flyout and HUD placement | |
 
+## Gate 9: reconnect (owner, needs the buds in a real phone/PC situation)
+
+1. Connect the buds to your phone only (disconnect them from the PC in Windows). Open Buds Control: it should show
+   "Connecting..." / "Searching..." and, within ~10 s, Connected (the audio reconnect asks the buds to join the PC).
+   Check the Developer tab log for `audio reconnect requested`. If it says `audio reconnect not used: ...`, send me
+   the line and `budsctl audio`.
+2. Turn "Reconnect buds to this PC automatically" off in Settings and repeat: the app must NOT pull the buds over by itself; Retry in
+   the flyout must.
+3. Sleep the PC for about a minute and wake it: the buds reconnect without clicking anything.
+4. With the app running, from a terminal: `budsctl status`, `budsctl cycle` (answered by the app, flyout updates), and
+   `budsctl --direct status` (fails with "address in use" while the app is running: expected).
+5. `budsctl sdp` shows `HeyMelody 079A: ..., channel 15`; `budsctl audio` lists the render endpoint.
+
 ## Without hardware
 
 `budsctl --fake <command>` (or `BUDS_FAKE=1` for the app, from Phase 4) runs against a simulated Buds 4, so

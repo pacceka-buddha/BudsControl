@@ -9,7 +9,7 @@ pub mod plan;
 mod win;
 
 #[cfg(windows)]
-pub use win::WindowsPlatform;
+pub use win::{WindowsPlatform, audio_reconnect, audio_report, sdp_report};
 
 /// The backend for the OS this was built for, if there is one yet.
 #[cfg(windows)]

@@ -8,6 +8,7 @@ pub mod controller;
 pub mod encode;
 #[cfg(feature = "fake")]
 pub mod fake;
+pub mod ipc;
 pub mod packet_log;
 pub mod parse;
 pub mod paths;

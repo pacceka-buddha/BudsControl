@@ -1,7 +1,9 @@
 //! Windows backend: classic Bluetooth RFCOMM through Winsock, devices through `BluetoothAPIs`.
 
+mod audio;
 mod devices;
 mod rfcomm;
+mod sdp;
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -21,6 +23,21 @@ impl Drop for CancelOnDrop {
     fn drop(&mut self) {
         self.0.store(true, Ordering::Relaxed);
     }
+}
+
+/// Which control services the buds at `address` advertise, and on which RFCOMM channels.
+pub fn sdp_report(address: [u8; 6]) -> Vec<String> {
+    sdp::report(address)
+}
+
+/// The audio endpoints of the buds at `address`, one line each (diagnostics).
+pub fn audio_report(address: [u8; 6]) -> Vec<String> {
+    audio::report(address)
+}
+
+/// Sends the audio driver's reconnect request; how many audio devices accepted it.
+pub fn audio_reconnect(address: [u8; 6]) -> Result<usize, String> {
+    audio::reconnect(address)
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -73,14 +90,28 @@ impl Platform for WindowsPlatform {
         }
     }
 
-    /// Phase 3 version: connect to the control service and drop the connection at once. Creating the
-    /// connection is what asks buds that are connected to the phone to join this PC too.
+    /// Asks buds that are connected to the phone to join this PC. First the Bluetooth audio driver's
+    /// one-shot reconnect (what the Windows volume flyout uses); when that is unavailable, connecting
+    /// to the control service and dropping the connection at once, which prompts the same thing.
     async fn page(&self, device: &BtDevice, log: LogFn) -> Result<(), String> {
         let cancelled = Arc::new(AtomicBool::new(false));
         let _guard = CancelOnDrop(cancelled.clone());
         let address = device.address;
         let work = tokio::task::spawn_blocking(move || {
             log(LogDirection::Info, "paging the buds");
+            match audio::reconnect(address) {
+                Ok(count) => {
+                    log(
+                        LogDirection::Info,
+                        &format!("audio reconnect requested ({count} audio device)"),
+                    );
+                    return Ok(());
+                }
+                Err(reason) => log(
+                    LogDirection::Info,
+                    &format!("audio reconnect not used: {reason}"),
+                ),
+            }
             let connected = rfcomm::connect_candidate(address, Candidate::HeyMelody, &cancelled)
                 .map_err(|e| e.to_string())?;
             connected.close();
