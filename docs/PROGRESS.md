@@ -46,3 +46,32 @@ Done. Gate 1 evidence:
 
 Deviations from the Swift code (malformed input only): the frame parser treats a length varint longer than 4 bytes
 or a length above 65535 as noise instead of waiting forever. Documented in `docs/PROTOCOL.md`.
+
+## Phase 2: controller actor + fake buds
+
+Done. Gate 2 evidence:
+
+- `cargo test -p buds-core`: 28 scenario tests in `tests/controller.rs` (tokio paused clock, so retry delays run
+  instantly and deterministically; repeated 5x, stable), 7 in `tests/support.rs` (settings, packet log), plus the
+  Phase 1 tests. `cargo clippy --workspace --all-targets -- -D warnings`, `npm run check` clean.
+- Covered: connect + read state; ANC level choice (last -> settings -> first); optimistic UI and a stale noise reply
+  not flipping it back; cycle order; mode changed on the buds; mode chosen while disconnected sent after the
+  product ID; low latency / EQ / custom EQ clamping / gestures; find-my-earbuds auto-stop at 30 s; retry delays
+  1,2,3,5,8,8 s; 3 s reply watchdog; connecting watchdog; failed open; buds into the case and out again;
+  3 s settling after the buds appear; page rate limit (15 s) and `autoConnect`; paging that brings the buds back;
+  resume from sleep; different buds reset state; remembered settings (restore only when different, off by default,
+  low latency recorded); shutdown; every frame logged; CLI `status`/actions/`raw`/`--scan`/`--watch` output.
+- `cli::execute` reproduces the upstream status block and accepts the upstream spellings (`--cli anc`, `--watch 30`).
+  `sdp` is a stub until Phase 9.
+- CI (`.github/workflows/ci.yml`): fmt, clippy and tests for `buds-core` on Windows/Ubuntu/macOS, a check that the
+  generated TypeScript bindings are committed, and the frontend check/build. Not run yet (no remote).
+
+Design notes and deviations from the Swift code:
+- Device events (connected, disconnected, wake from sleep) are polling-based (every 2 s) as planned. The health
+  poll's "buds connected but not us" safety net only fires after the buds have been connected for 3 s, so it can't
+  race the delayed connect.
+- Fix: remembered settings are only compared with a reading from the *current* link. The Swift code kept the
+  pre-disconnect mode, so the low-latency reply could consume the restore on a stale value (found by the tests).
+- A new log line "retrying in Ns" is written on every retry (useful in the packet log; the tests rely on it).
+- `Platform::open` takes the last working candidate as `hint`, and `Platform::wall_time` is overridable so tests can
+  simulate sleep.
