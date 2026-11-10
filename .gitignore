@@ -30,3 +30,7 @@ Thumbs.db
 
 # Claude Code local settings
 /.claude/
+
+# Packaging output
+/release/
+/src-tauri/gen/

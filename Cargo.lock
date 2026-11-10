@@ -1900,6 +1900,9 @@ dependencies = [
 [[package]]
 name = "icongen"
 version = "0.1.0"
+dependencies = [
+ "tiny-skia",
+]
 
 [[package]]
 name = "icu_collections"

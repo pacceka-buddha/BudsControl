@@ -341,3 +341,46 @@ Left for the owner / noted:
   connected here); if it does not, the RFCOMM fallback only runs when the audio call errors, so report it.
 - The buds kept refusing mode changes (0x0E) in this session (case battery -1%, probably in the case or idle), so
   `anc` over IPC reached the buds and came back refused; the plumbing is what was verified.
+
+## Phase 10: Windows packaging and release
+
+Done, except the parts that need Windows Sandbox / GitHub (see "Left"). Evidence (Windows 11):
+
+- **Icon.** `crates/icongen` (tiny-skia, no external art) redraws the original icon: blue-to-indigo squircle with glass
+  sheen and rim, three-quarter white battery ring, two earbuds. `cargo run -p icongen -- app-icon.png` then
+  `npx tauri icon app-icon.png` regenerated `src-tauri/icons/*` (Android/iOS/64 px outputs deleted: not used).
+  Looked at the 1024 px render; the earbuds sit slightly lower than the macOS version so the group is centred in the ring.
+- **Sidecar.** `scripts/build-sidecar.mjs` builds `budsctl --release` and copies it to
+  `src-tauri/binaries/budsctl-<triple>.exe` (gitignored); it runs as part of `beforeBuildCommand`.
+  Deviation from the plan: `bundle.externalBin` is in `src-tauri/tauri.bundle.conf.json`, passed with `--config` by the
+  packaging script, NOT in `tauri.conf.json`: tauri-build fails when a listed sidecar doesn't exist, which would break
+  every plain `cargo build` / `tauri dev` / CI run.
+- **Installer (NSIS).** `installMode: currentUser`, WebView2 `downloadBootstrapper`, Start menu folder, uninstaller,
+  `src-tauri/nsis/hooks.nsh` (`NSIS_HOOK_POSTUNINSTALL` deletes `HKCU\...\Run\Buds Control`). `mainBinaryName` is
+  `BudsControl` so the installed exe is `BudsControl.exe`.
+- **Packaging.** `scripts/package-windows.ps1` (`npm ci`, `tauri build`, then installer + portable zip into `release/`;
+  the plan said `dist/`, but that is Vite's output folder and is wiped by every frontend build). Output:
+  `BudsControl-0.1.0-windows-x64-setup.exe` 1.8 MB, `BudsControl-0.1.0-windows-x64-portable.zip` 2.4 MB (app, budsctl,
+  README, LICENSE, notices). Release build takes ~4 min cold.
+- **CI.** `.github/workflows/release.yml`: on tag `v*`, a Windows job runs the script and attaches both files to the
+  GitHub release (not run yet: needs a pushed tag).
+- **README** rewritten: features, install (installer / portable, SmartScreen "More info > Run anyway", tray overflow tip),
+  CLI, how it works, development, credits, disclaimer.
+
+Gate 10 checks run on this PC (not in Windows Sandbox):
+- Portable zip unpacked to a temp folder: `BudsControl.exe` starts, connects to the real Buds 4, `budsctl.exe` next to it
+  answers `status` and `sdp` through the app, transparency / cycle changed the buds' mode. Idle for 60 s: 0.12 s CPU
+  (about 0.2 %), 33 MB working set.
+- Installer, silent (`/S`): exit 0, no admin prompt, files in `%LOCALAPPDATA%\Buds Control\` (BudsControl.exe, budsctl.exe,
+  uninstall.exe), Start menu entry, uninstall entry in HKCU. The installed app started and connected. Uninstalling (`/S`)
+  while the app was running closed it and removed the folder, Start menu folder, uninstall entry and the autostart value.
+  (The autostart value was written by me with the same name/format the app uses, not by the app's own toggle.)
+  My test install was removed again afterwards; settings in `%APPDATA%\BudsControl` were not touched.
+
+Left for the owner / noted:
+- Windows Sandbox install check, 5-minute idle CPU, and the full hardware checklist on the release build (docs/TESTING.md).
+- The tag-triggered workflow has not run; push a tag `v0.1.0` to try it. The repository URL in `Cargo.toml` and the
+  README (`github.com/nilcodes/BudsControl`) is an assumption: correct it if the repo lives elsewhere.
+- Builds are unsigned (SmartScreen warning); signing needs a certificate.
+- `BudsControl.exe` in the zip is the file Tauri patched with the installer type ("nsis"); harmless, only the updater
+  looks at it (there is no updater).

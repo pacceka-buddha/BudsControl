@@ -68,6 +68,16 @@ The same text is in `%LOCALAPPDATA%\BudsControl\BudsControl.log`. **If no candid
    `budsctl --direct status` (fails with "address in use" while the app is running: expected).
 5. `budsctl sdp` shows `HeyMelody 079A: ..., channel 15`; `budsctl audio` lists the render endpoint.
 
+## Gate 10: release build (owner)
+
+1. `./scripts/package-windows.ps1`, or download the artifacts of a tagged release.
+2. Windows Sandbox (no Bluetooth): run the setup exe: it installs without an admin prompt, the app starts in the tray
+   (overflow area), the uninstaller (Settings > Apps) removes it; turn on "Launch at login" first and confirm
+   `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` no longer has "Buds Control" afterwards.
+3. Real PC: the portable zip runs from any folder and `budsctl.exe` next to it works; run the whole checklist above on
+   the release build; leave it idle for 5 minutes (Task Manager: about 0 % CPU).
+4. Tag `v0.1.0` and confirm the Release workflow attaches the setup exe and the portable zip.
+
 ## Without hardware
 
 `budsctl --fake <command>` (or `BUDS_FAKE=1` for the app, from Phase 4) runs against a simulated Buds 4, so

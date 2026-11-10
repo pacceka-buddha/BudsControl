@@ -7,7 +7,7 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": "npm run build && node scripts/build-sidecar.mjs"
   },
   "app": {
     "windows": [],
@@ -17,13 +17,31 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
-  }
+    ],
+    "publisher": "nilcodes",
+    "copyright": "MIT License. Based on BudsControl by amarsakore.",
+    "shortDescription": "Control OnePlus, OPPO and realme earbuds from the tray",
+    "category": "Utility",
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "nsis/hooks.nsh",
+        "displayLanguageSelector": false,
+        "startMenuFolder": "Buds Control"
+      }
+    }
+  },
+  "mainBinaryName": "BudsControl"
 }
