@@ -195,12 +195,19 @@ pub fn open_settings(app: &AppHandle) {
         let _ = window.set_focus();
         return;
     }
-    let built = WebviewWindowBuilder::new(app, SETTINGS, WebviewUrl::App("settings.html".into()))
-        .title("Buds Control Settings")
-        .inner_size(600.0, 640.0)
-        .min_inner_size(520.0, 480.0)
-        .center()
-        .build();
+    let builder = || {
+        WebviewWindowBuilder::new(app, SETTINGS, WebviewUrl::App("settings.html".into()))
+            .title("Buds Control Settings")
+            .inner_size(600.0, 640.0)
+            .min_inner_size(520.0, 480.0)
+            .center()
+    };
+    // A Mica backdrop (Windows 11) behind a translucent page; plain window where it isn't available.
+    let built = builder()
+        .transparent(true)
+        .effects(EffectsBuilder::new().effect(Effect::Mica).build())
+        .build()
+        .or_else(|_| builder().build());
     match built {
         Ok(window) => {
             let _ = window.set_focus();

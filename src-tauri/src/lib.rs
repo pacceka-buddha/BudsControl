@@ -50,6 +50,12 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             app_windows::show_flyout(app, None);
         }))
+        // Launch at login: the entry starts the app with --background, so it stays quiet in the tray.
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--background"]),
+        ))
+        .plugin(tauri_plugin_clipboard_manager::init())
         .setup(setup)
         .invoke_handler(tauri::generate_handler![
             commands::get_state,
@@ -69,6 +75,10 @@ pub fn run() {
             commands::get_log,
             commands::clear_log,
             commands::set_log_paused,
+            commands::get_log_paused,
+            commands::get_autostart,
+            commands::set_autostart,
+            commands::app_version,
             commands::export_log,
             commands::get_accent_color,
             commands::flyout_resize,

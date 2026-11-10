@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Permissions for the app's own windows",
   "windows": ["flyout", "settings", "hud"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "clipboard-manager:allow-write-text"]
 }

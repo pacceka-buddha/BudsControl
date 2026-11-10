@@ -80,3 +80,17 @@ export function gainFromPosition(y: number, height: number, min: number, max: nu
   const fraction = Math.min(Math.max(y / height, 0), 1)
   return max - Math.round(fraction * (max - min))
 }
+
+/** A hex command number from a text field ("0106", "0x0106", "01 06"); null if it isn't one 16-bit value. */
+export function parseCommand(text: string): number | null {
+  const digits = text.replace(/^\s*0x/i, '').replace(/[^0-9a-f]/gi, '')
+  if (digits.length === 0 || digits.length > 4) return null
+  return parseInt(digits, 16)
+}
+
+/** "HH:MM:SS.mmm" in local time, for the packet log. */
+export function formatClock(ms: number): string {
+  const d = new Date(ms)
+  const two = (n: number) => String(n).padStart(2, '0')
+  return `${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3, '0')}`
+}

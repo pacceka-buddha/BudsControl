@@ -86,3 +86,11 @@ button {
   margin: 4px 6px;
   background: var(--stroke);
 }
+
+/* Windows with a Mica backdrop (the settings window): let it show through. */
+html.mica {
+  background: transparent;
+}
+html.mica body {
+  overflow: hidden;
+}

@@ -210,3 +210,42 @@ Done. Gate 6 evidence:
 Not verified (needs the owner or other hardware): the icon at 125 / 150 / 200% on a real display, an actual switch of
 the Windows taskbar theme (the colour logic is exercised through the override), and the right-click menu's check
 marks and enabled state (the screen-control tool can't right-click; the code has been in place since Phase 4).
+
+## Phase 7: settings window + launch at login
+
+Done, with the items below left for the owner. Gate 7 evidence (real app, real Buds 4, Windows 11):
+
+- Settings window (600 x 640, Mica backdrop with a plain fallback, created on demand, destroyed on close): General,
+  Shortcuts, Developer (tab only while "Show developer options" is on, and it returns to General if that is turned
+  off). Built from new `SettingRow` / `Tabs` components; light and dark reviewed in the browser simulator
+  (`settings.html?tab=...&dev=1`), dark and the real data on screen.
+- General: device card (ring, name, "Connected · model 065414 · 100% · Off", Reconnect), Launch at login,
+  Reconnect automatically, Remember settings, Show popup on shortcut, Show developer options, tip, version.
+- Persistence: toggled Remember settings and Developer options on, restarted the app, reopened Settings: both still
+  on, and the flyout's More panel state was restored. `update_settings` merges a partial object (pure `apply_patch`,
+  3 unit tests: partial patch, unknown keys ignored / wrong types rejected, maps replaced whole); the controller reads
+  the shared store at use time, so changes apply immediately.
+- Launch at login (tauri-plugin-autostart, args `--background`): turning it on created
+  `HKCU\...\Run\Buds Control = ...\budscontrol.exe --background`; turning it off removed it. The toggle reads the
+  system state each time the page opens and when the window regains focus.
+- Developer tab on the real buds: device facts, every noise-mode bit with Apply / check mark, game mode switch,
+  paired devices (this PC + the phone), raw command (hex validation disables Send), quick buttons, scan, and the live
+  packet log (Pause, Copy -> "Copied" through the clipboard plugin, Clear; follows new lines unless scrolled up;
+  600-line cap). The log showed the buds rejecting an Apply with `mode change rejected: 0E` and the UI correctly
+  stayed on the real mode.
+- Closing the window frees its webview: 8 processes / 487 MB with it open, 7 / 402 MB after (dev build).
+- Frontend: 11 vitest tests (new: hex command parsing, log clock), `npm run check` clean. Screenshots in
+  `docs/screenshots/`.
+
+Left for the owner / noted:
+- Sign out and back in to see the autostart entry start the app hidden (the registry entry and its `--background`
+  argument are verified; the dev build registers `target\debug\budscontrol.exe`).
+- Shortcuts tab is a placeholder until Phase 8 (lists the four actions and any saved combination).
+- The buds answered the noise-mode command with status `0x0E` (rejected) in their current state at the time of
+  testing (mode Off, case battery not reported). Earlier phases switched modes fine, so this looks like the buds
+  refusing changes in some physical state (in / near the case?). Worth re-checking with the buds worn or out of the
+  case; the app's handling (re-read the real mode) is correct either way.
+- Wear status: reply 0x0109 on this firmware carries values 7 / 5 / 4 rather than 0 / 1 / 3, so the parsed wear
+  state is empty. Not shown anywhere yet; revisit in Phase 9 if wear detection is wanted.
+- RFCOMM channel still shows "-" (see Phase 4 notes).
+- Settings and the registry were restored to their previous values after testing.

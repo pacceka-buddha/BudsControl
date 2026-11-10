@@ -45,3 +45,8 @@ export async function initStores(): Promise<void> {
   app.log = log
   app.fake = fake
 }
+
+/** Empties the packet list shown in the Developer tab (after the Rust side was cleared). */
+export function resetLog(): void {
+  app.log = []
+}

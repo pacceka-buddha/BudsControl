@@ -1,5 +1,6 @@
 // Stand-in for the Rust side when the UI runs in a plain browser (design review, screenshots).
-// Open  http://localhost:1420/flyout.html?scenario=<name>  to pick a state:
+// Open  http://localhost:1420/flyout.html?scenario=<name>  to pick a state (settings.html?tab=developer&dev=1
+// shows the settings window):
 //   connected (default) · anc · disconnected · connecting · lowbattery · charging · finding
 //   longeq (EQ names too long for buttons) · minimal (no More panel) · noanc (buds without ANC)
 // It only imitates what the screens need; the real behaviour lives in buds-core.
@@ -84,7 +85,10 @@ function base(): Snapshot {
     ],
     gestures: { left: side(true), right: side(false) },
     findingBuds: false,
-    hosts: [],
+    hosts: [
+      { address: 'AA:BB:CC:DD:EE:01', name: 'DESKTOP-5RT2K', connected: true, isThisHost: true },
+      { address: '11:22:33:44:55:66', name: 'Pixel 9', connected: true, isThisHost: false },
+    ],
     wearLeft: 'inEar',
     wearRight: 'inEar',
     capabilitiesCount: 35,
@@ -95,7 +99,18 @@ function base(): Snapshot {
     availableLevels: ['smart', 'max', 'moderate', 'mild', 'adaptive'],
     supports: { noiseControl: true, equalizer: true, customEq: true, lowLatency: true, findBuds: true, gestures: true },
     hasMoreControls: true,
-    layout: [],
+    layout: [
+      { bit: 0, modeType: 1, name: 'Off' },
+      { bit: 1, modeType: 5, name: 'ANC' },
+      { bit: 2, modeType: 2, name: 'Transparency' },
+      { bit: 3, modeType: 1, name: 'Off' },
+      { bit: 4, modeType: 4, name: 'ANC · Max' },
+      { bit: 5, modeType: 8, name: 'ANC · Moderate' },
+      { bit: 6, modeType: 3, name: 'ANC · Mild' },
+      { bit: 7, modeType: 7, name: 'ANC · Smart' },
+      { bit: 8, modeType: 2, name: 'Transparency' },
+      { bit: 11, modeType: 10, name: 'ANC · Adaptive' },
+    ],
     hostLabel: 'PC',
   }
 }
@@ -180,7 +195,7 @@ const settings: Settings = {
   autoConnect: true,
   rememberSettings: false,
   showHud: true,
-  developerMode: false,
+  developerMode: params.get('dev') === '1',
   moreExpanded: params.get('more') === '1',
   gestureSide: 'left',
   lastAncLevel: null,
@@ -190,6 +205,18 @@ const settings: Settings = {
   shortcuts: {},
   remembered: {},
 }
+
+let autostart = false
+let logPaused = false
+type Dir = 'sent' | 'received' | 'info'
+const log: { timeMs: number; direction: Dir; text: string }[] = ([
+  { direction: 'info', text: 'connecting to OnePlus Buds 4 (00:A4:1C:39:41:4A)' },
+  { direction: 'info', text: 'connected via HeyMelody service 079A' },
+  { direction: 'sent', text: 'AA 07 00 00 00 01 01 00 00' },
+  { direction: 'received', text: 'AA 10 00 00 00 81 01 09 00 00 FF 77 5A EA 67 0E 20 07' },
+  { direction: 'sent', text: 'AA 07 00 00 03 01 02 00 00' },
+  { direction: 'received', text: 'AA 0B 00 00 03 81 02 04 00 00 14 54 06' },
+] as { direction: Dir; text: string }[]).map((e, i) => ({ ...e, timeMs: Date.now() - (6 - i) * 120 }))
 
 function publish() {
   const left = state.left?.level
@@ -252,7 +279,31 @@ export function invoke(command: string, args: Record<string, unknown> = {}): Pro
       }, 1200)
       break
     case 'get_log':
-      return Promise.resolve([])
+      return Promise.resolve(structuredClone(log))
+    case 'get_log_paused':
+      return Promise.resolve(logPaused)
+    case 'set_log_paused':
+      logPaused = args.paused as boolean
+      break
+    case 'clear_log':
+      log.length = 0
+      break
+    case 'export_log':
+      return Promise.resolve(log.map((e) => `${new Date(e.timeMs).toISOString().slice(11, 23)} ${e.text}`).join('\n'))
+    case 'get_autostart':
+      return Promise.resolve(autostart)
+    case 'set_autostart':
+      autostart = args.enabled as boolean
+      return Promise.resolve(autostart)
+    case 'app_version':
+      return Promise.resolve('0.1.0')
+    case 'send_raw': {
+      const hex = (n: number, w: number) => n.toString(16).toUpperCase().padStart(w, '0')
+      const entry = { timeMs: Date.now(), direction: 'sent' as const, text: `AA 07 00 00 ${hex((args.command as number) & 255, 2)} ${hex((args.command as number) >> 8, 2)} 01 00 00` }
+      log.push(entry)
+      emit('buds://log', [entry])
+      break
+    }
     case 'get_accent_color':
       return Promise.resolve(params.get('accent') ? `#${params.get('accent')}` : null)
     case 'is_fake':

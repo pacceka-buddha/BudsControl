@@ -34,6 +34,12 @@ export const api = {
   clearLog: () => invoke<void>('clear_log'),
   setLogPaused: (paused: boolean) => invoke<void>('set_log_paused', { paused }),
   exportLog: () => invoke<string>('export_log'),
+  getLogPaused: () => invoke<boolean>('get_log_paused'),
+
+  /** Launch at login, as the system reports it. */
+  getAutostart: () => invoke<boolean>('get_autostart'),
+  setAutostart: (enabled: boolean) => invoke<boolean>('set_autostart', { enabled }),
+  appVersion: () => invoke<string>('app_version'),
 
   getAccentColor: () => invoke<string | null>('get_accent_color'),
   flyoutResize: (height: number) => invoke<void>('flyout_resize', { height }),

@@ -5,7 +5,9 @@ import {
   gainFromPosition,
   gainLabel,
   hzLabel,
+  formatClock,
   namesFitAsButtons,
+  parseCommand,
   prefersDarkText,
   subtitle,
 } from './format'
@@ -74,5 +76,27 @@ describe('gainFromPosition', () => {
     expect(gainFromPosition(32, 64, -6, 6)).toBe(0)
     expect(gainFromPosition(-10, 64, -6, 6)).toBe(6)
     expect(gainFromPosition(500, 64, -6, 6)).toBe(-6)
+  })
+})
+
+describe('parseCommand', () => {
+  it('reads one 16-bit hex number', () => {
+    expect(parseCommand('0106')).toBe(0x0106)
+    expect(parseCommand('0x010C')).toBe(0x010c)
+    expect(parseCommand(' 01 06 ')).toBe(0x0106)
+    expect(parseCommand('6')).toBe(6)
+    expect(parseCommand('FFFF')).toBe(0xffff)
+  })
+  it('rejects anything else', () => {
+    expect(parseCommand('')).toBeNull()
+    expect(parseCommand('zz')).toBeNull()
+    expect(parseCommand('12345')).toBeNull()
+  })
+})
+
+describe('formatClock', () => {
+  it('pads every field', () => {
+    const ms = new Date(2026, 10, 10, 8, 5, 3, 7).getTime()
+    expect(formatClock(ms)).toBe('08:05:03.007')
   })
 })
