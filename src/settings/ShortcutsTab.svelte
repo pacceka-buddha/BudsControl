@@ -6,13 +6,14 @@
   import SettingRow from '../lib/components/SettingRow.svelte'
   import ShortcutRecorder from '../lib/components/ShortcutRecorder.svelte'
   import { app } from '../lib/stores.svelte'
-  import { onMount } from 'svelte'
 
   // Wayland has no global shortcuts for ordinary apps; the desktop's own keyboard settings do the job.
-  let wayland = $state(false)
-  onMount(() => {
-    void api.getPlatform().then((info) => (wayland = info.wayland))
-  })
+  const wayland = $derived(app.platform?.wayland ?? false)
+  const modifiers = $derived(
+    app.platform?.os === 'macos'
+      ? 'Control, Option, Shift or Command'
+      : `Ctrl, Alt, Shift or ${app.platform?.os === 'windows' ? 'Win' : 'Super'}`,
+  )
 
   interface Props {
     settings: Settings
@@ -57,8 +58,7 @@
     </p>
   {:else}
     <p class="note">
-      Shortcuts work everywhere, even when Buds Control isn't in front. Include Ctrl, Alt, Shift or Win (or use an
-      F-key).
+      Shortcuts work everywhere, even when Buds Control isn't in front. Include {modifiers} (or use an F-key).
     </p>
   {/if}
 </div>

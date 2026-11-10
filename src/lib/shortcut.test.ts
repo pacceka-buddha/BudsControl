@@ -59,7 +59,8 @@ describe('display', () => {
     expect(display('Ctrl+Backquote')).toBe('Ctrl+`')
   })
   it('uses symbols on a Mac', () => {
-    expect(display('Ctrl+Alt+Shift+Super+KeyN', true)).toBe('⌃⌥⇧⌘N')
-    expect(display('Super+Digit4', true)).toBe('⌘4')
+    expect(display('Ctrl+Alt+Shift+Super+KeyN', 'macos')).toBe('⌃⌥⇧⌘N')
+    expect(display('Super+Digit4', 'macos')).toBe('⌘4')
+    expect(display('Super+Space', 'linux')).toBe('Super+Space')
   })
 })

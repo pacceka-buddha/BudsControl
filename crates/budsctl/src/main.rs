@@ -1,8 +1,9 @@
 //! `budsctl`: command-line control of OnePlus / OPPO / realme earbuds.
 //!
 //! Runs its own controller against the real Bluetooth stack (or the simulated buds with `--fake`),
-//! executes one command with `buds_core::cli::execute` and exits. The same commands will later be
-//! forwarded to the running tray app (Phase 9).
+//! executes one command with `buds_core::cli::execute` and exits. When the tray app is running (and
+//! neither `--direct` nor `--fake` is given) the command is forwarded to it over IPC instead, since the
+//! buds allow only one control connection.
 
 use std::io::Write;
 use std::process::ExitCode;

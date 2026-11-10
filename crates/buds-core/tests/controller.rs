@@ -411,6 +411,16 @@ async fn buds_going_into_the_case_leave_no_stuck_connecting() {
 }
 
 #[tokio::test(start_paused = true)]
+async fn a_failed_device_listing_does_not_drop_a_working_link() {
+    let r = connected_rig().await;
+    // The OS returns an empty list (an error on Windows) while the control link is fine.
+    r.fake.set_present(false);
+    secs(10.0).await;
+    assert_eq!(r.snap().link, LinkState::Connected);
+    assert_eq!(r.log_count("disconnected from this"), 0);
+}
+
+#[tokio::test(start_paused = true)]
 async fn buds_that_appear_are_connected_after_the_settling_time() {
     let r = rig();
     r.settings.update(|s| s.auto_connect = false);

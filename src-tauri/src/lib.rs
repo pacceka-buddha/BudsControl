@@ -134,13 +134,13 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         }
         spawn_controller(platform, settings, log)
     } else {
-        #[cfg(any(windows, target_os = "linux"))]
+        #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
         {
             spawn_controller(buds_bt::NativePlatform::new(), settings, log)
         }
-        #[cfg(not(any(windows, target_os = "linux")))]
+        #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
         {
-            // No native backend on this OS yet (Phase 12): use the simulated buds.
+            // No Bluetooth backend for this OS: use the simulated buds.
             spawn_controller(FakePlatform::new(), settings, log)
         }
     };

@@ -2,19 +2,24 @@
 //! reads on its own thread.
 //!
 //! Socket lifetime: the reader thread owns closing the socket. `close()` only calls `shutdown`
-//! (which wakes the blocked `recv`); the reader then closes the handle under the mutex, so a
+//! (which wakes the blocked `recv`); the reader then closes the handle under the write lock, so a
 //! handle value is never used after it was closed and possibly reused by another socket.
+//!
+//! Writes and `close()` only take the read lock, so closing never waits for a send in progress, and
+//! every send has a timeout ([`SEND_TIMEOUT`]): a link whose sends stall (buds at the edge of range)
+//! fails the write instead of blocking the controller.
 
 use std::io;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, Once};
+use std::sync::{Arc, Once, RwLock};
 use std::time::{Duration, Instant};
 
 use buds_core::platform::{Link, LinkSink};
 use windows::Win32::Devices::Bluetooth::{AF_BTH, BTHPROTO_RFCOMM, SOCKADDR_BTH};
 use windows::Win32::Networking::WinSock::{
-    SD_BOTH, SEND_RECV_FLAGS, SOCK_STREAM, SOCKADDR, SOCKET, SOCKET_ERROR, WSADATA,
-    WSAGetLastError, WSAStartup, closesocket, connect, getpeername, recv, send, shutdown, socket,
+    SD_BOTH, SEND_RECV_FLAGS, SO_SNDTIMEO, SOCK_STREAM, SOCKADDR, SOCKET, SOCKET_ERROR, SOL_SOCKET,
+    WSADATA, WSAGetLastError, WSAStartup, closesocket, connect, getpeername, recv, send,
+    setsockopt, shutdown, socket,
 };
 use windows::core::GUID;
 
@@ -26,6 +31,10 @@ pub(super) const HEYMELODY: GUID = GUID::from_u128(0x0000079A_D102_11E1_9B23_000
 pub(super) const HEYMELODY_ALT: GUID = GUID::from_u128(0x00001107_D102_11E1_9B23_00025B00A5A5);
 /// Standard Serial Port Profile.
 pub(super) const SPP: GUID = GUID::from_u128(0x00001101_0000_1000_8000_00805F9B34FB);
+
+/// A send that can't complete in this long fails (the controller then reconnects). Our frames are a
+/// few dozen bytes, so a healthy link never comes close.
+const SEND_TIMEOUT: Duration = Duration::from_secs(2);
 
 pub(super) fn init_winsock() {
     static INIT: Once = Once::new();
@@ -200,8 +209,18 @@ impl Connected {
 
     /// Starts the reader thread and returns the link.
     pub fn into_link(self, hint: Candidate, sink: LinkSink) -> WinLink {
+        let millis = u32::try_from(SEND_TIMEOUT.as_millis()).unwrap_or(u32::MAX);
+        // SAFETY: SO_SNDTIMEO takes a DWORD of milliseconds; the slice is exactly that.
+        unsafe {
+            setsockopt(
+                self.sock,
+                SOL_SOCKET,
+                SO_SNDTIMEO,
+                Some(&millis.to_ne_bytes()),
+            );
+        }
         let state = Arc::new(State {
-            sock: Mutex::new(Some(self.sock)),
+            sock: RwLock::new(Some(self.sock)),
             closed: AtomicBool::new(false),
         });
         let reader_state = state.clone();
@@ -219,8 +238,9 @@ impl Connected {
 }
 
 struct State {
-    /// `None` once the reader has closed the socket.
-    sock: Mutex<Option<SOCKET>>,
+    /// `None` once the reader has closed the socket. Sends and `shutdown` hold the read lock; only the
+    /// reader takes the write lock, to close the handle.
+    sock: RwLock<Option<SOCKET>>,
     /// We closed it on purpose (so the reader must not report a remote close).
     closed: AtomicBool,
 }
@@ -236,7 +256,7 @@ fn read_loop(sock: SOCKET, state: &State, sink: &LinkSink) {
         sink.data(buf[..n as usize].to_vec());
     }
     let deliberate = state.closed.swap(true, Ordering::SeqCst);
-    if let Some(s) = state.sock.lock().unwrap().take() {
+    if let Some(s) = state.sock.write().unwrap().take() {
         // SAFETY: taken out of the mutex, so nobody else can use or close it.
         unsafe { closesocket(s) };
     }
@@ -262,13 +282,13 @@ impl Link for WinLink {
     }
 
     fn write(&self, bytes: &[u8]) -> io::Result<()> {
-        let guard = self.state.sock.lock().unwrap();
+        let guard = self.state.sock.read().unwrap();
         let Some(sock) = *guard else {
             return Err(io::Error::new(io::ErrorKind::BrokenPipe, "link closed"));
         };
         let mut sent = 0;
         while sent < bytes.len() {
-            // SAFETY: the slice is valid for reads; the socket stays open while the lock is held.
+            // SAFETY: the slice is valid for reads; the socket stays open while the read lock is held.
             let n = unsafe { send(sock, &bytes[sent..], SEND_RECV_FLAGS(0)) };
             if n == SOCKET_ERROR {
                 let code = last_error();
@@ -281,8 +301,9 @@ impl Link for WinLink {
 
     fn close(&self) {
         self.state.closed.store(true, Ordering::SeqCst);
-        if let Some(sock) = *self.state.sock.lock().unwrap() {
-            // SAFETY: wakes the reader's `recv`; the reader closes the handle.
+        if let Some(sock) = *self.state.sock.read().unwrap() {
+            // SAFETY: wakes the reader's `recv`; the reader closes the handle. Only the read lock is
+            // needed, so this never waits behind a send.
             unsafe { shutdown(sock, SD_BOTH) };
         }
     }

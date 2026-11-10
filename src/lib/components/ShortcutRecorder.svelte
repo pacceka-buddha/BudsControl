@@ -5,6 +5,7 @@
   import { onDestroy } from 'svelte'
   import { api } from '../api'
   import { display, interpret } from '../shortcut'
+  import { app } from '../stores.svelte'
   import Icon from './Icon.svelte'
 
   interface Props {
@@ -86,14 +87,14 @@
     class:recording
     class:shake={shaking}
     class:conflict
-    aria-label="{label}: {value ? display(value) : 'no shortcut'}. Activate to record a new one."
+    aria-label="{label}: {value ? display(value, app.platform?.os) : 'no shortcut'}. Activate to record a new one."
     onclick={() => (recording ? stop() : start())}
     onblur={() => void stop()}
   >
     {#if recording}
       Type shortcut…
     {:else if value}
-      <span class="keys">{display(value)}</span>
+      <span class="keys">{display(value, app.platform?.os)}</span>
     {:else}
       Record Shortcut
     {/if}

@@ -8,6 +8,7 @@
   import SettingRow from '../lib/components/SettingRow.svelte'
   import ToggleSwitch from '../lib/components/ToggleSwitch.svelte'
   import { subtitle } from '../lib/format'
+  import { app } from '../lib/stores.svelte'
 
   interface Props {
     snapshot: Snapshot
@@ -84,9 +85,11 @@
     </SettingRow>
   </div>
 
-  <p class="tip">
-    Tip: to keep the icon always visible, drag it from the hidden-icons arrow (^) onto the taskbar.
-  </p>
+  {#if app.platform?.os === 'windows'}
+    <p class="tip">
+      Tip: to keep the icon always visible, drag it from the hidden-icons arrow (^) onto the taskbar.
+    </p>
+  {/if}
   <p class="about">Buds Control {version} · unofficial, not affiliated with OnePlus, OPPO or realme.</p>
 </div>
 

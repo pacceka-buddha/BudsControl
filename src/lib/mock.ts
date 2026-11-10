@@ -316,7 +316,8 @@ export function invoke(command: string, args: Record<string, unknown> = {}): Pro
     }
     case 'get_platform': {
       const platform = params.get('platform')
-      return Promise.resolve({ os: platform === 'linux' || platform === 'wayland' ? 'linux' : 'windows', wayland: platform === 'wayland' })
+      const os = platform === 'linux' || platform === 'wayland' ? 'linux' : platform === 'macos' ? 'macos' : 'windows'
+      return Promise.resolve({ os, wayland: platform === 'wayland' })
     }
     case 'get_accent_color':
       return Promise.resolve(params.get('accent') ? `#${params.get('accent')}` : null)

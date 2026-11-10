@@ -4,6 +4,7 @@
 import { listen } from './tauri'
 import { api } from './api'
 import type { LogEntry } from './bindings/LogEntry'
+import type { PlatformInfo } from './bindings/PlatformInfo'
 import type { Settings } from './bindings/Settings'
 import type { Snapshot } from './bindings/Snapshot'
 
@@ -17,7 +18,9 @@ export const app = $state<{
   fake: boolean
   /** Actions (`cycle`, `anc`, ...) whose shortcut another program already owns. */
   conflicts: string[]
-}>({ snapshot: null, settings: null, log: [], fake: false, conflicts: [] })
+  /** The OS the app runs on (null until loaded). */
+  platform: PlatformInfo | null
+}>({ snapshot: null, settings: null, log: [], fake: false, conflicts: [], platform: null })
 
 let started = false
 
@@ -39,13 +42,15 @@ export async function initStores(): Promise<void> {
       app.log = [...app.log, ...payload].slice(-LOG_LIMIT)
     }),
   ])
-  const [snapshot, settings, log, fake, conflicts] = await Promise.all([
+  const [snapshot, settings, log, fake, conflicts, platform] = await Promise.all([
     api.getState(),
     api.getSettings(),
     api.getLog(),
     api.isFake(),
     api.getConflicts(),
+    api.getPlatform(),
   ])
+  app.platform = platform
   app.conflicts = conflicts
   app.snapshot = snapshot
   app.settings = settings

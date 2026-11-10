@@ -1,7 +1,7 @@
 //! Per-OS Bluetooth backends implementing `buds_core::platform::Platform`.
 //!
-//! Windows (Phase 3) is implemented; Linux (Phase 11) and macOS (Phase 12) follow. The candidate
-//! ordering (`plan`) is shared and has no OS dependency.
+//! Windows (Winsock RFCOMM), Linux (BlueZ via `bluer`) and macOS (IOBluetooth). The candidate ordering
+//! (`plan`) is shared and has no OS dependency.
 
 pub mod plan;
 
@@ -23,15 +23,15 @@ pub use macos::{MacPlatform, run_main_loop_until, sdp_report};
 #[cfg(windows)]
 pub use win::{WindowsPlatform, audio_reconnect, audio_report, sdp_report};
 
-/// The backend for the OS this was built for, if there is one yet.
+/// The Bluetooth backend for the OS this was built for.
 #[cfg(windows)]
 pub type NativePlatform = WindowsPlatform;
 
-/// The backend for the OS this was built for, if there is one yet.
+/// The Bluetooth backend for the OS this was built for.
 #[cfg(target_os = "linux")]
 pub type NativePlatform = LinuxPlatform;
 
-/// The backend for the OS this was built for, if there is one yet.
+/// The Bluetooth backend for the OS this was built for.
 #[cfg(target_os = "macos")]
 pub type NativePlatform = MacPlatform;
 

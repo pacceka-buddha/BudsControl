@@ -390,6 +390,11 @@ fn set_noise_payload_masks() {
     assert_eq!(encode::set_noise(7), [0x01, 0x01, 0x80]);
     assert_eq!(encode::set_noise(8), [0x01, 0x01, 0x00, 0x01]);
     assert_eq!(encode::set_noise(11), [0x01, 0x01, 0x00, 0x08]);
+    // Bits past 31 (the Developer tab can send any u8) must not overflow a shift.
+    assert_eq!(encode::set_noise(40), [0x01, 0x01, 0, 0, 0, 0, 0, 0x01]);
+    let top = encode::set_noise(255);
+    assert_eq!(top.len(), 2 + 32);
+    assert_eq!(top[33], 0x80);
 }
 
 #[test]

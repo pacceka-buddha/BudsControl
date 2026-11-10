@@ -99,10 +99,21 @@ fn tray_event(app: &AppHandle, event: &TrayIconEvent) {
 
 fn menu_event(app: &AppHandle, id: &str) {
     let handle = &app.state::<AppState>().handle;
+    let mode = match id {
+        "anc" => Some(NoiseMode::Anc),
+        "transparency" => Some(NoiseMode::Transparency),
+        "off" => Some(NoiseMode::Off),
+        _ => None,
+    };
+    if let Some(mode) = mode {
+        handle.set_mode(mode, None);
+        // Windows flips a check item by itself when it is clicked. Clicking the mode that is already
+        // on would leave it unchecked, and no state change would come to put the mark back, so set
+        // the marks from the current state now; the new mode's state change follows.
+        update(app, &app.state::<TrayState>(), &handle.snapshot());
+        return;
+    }
     match id {
-        "anc" => handle.set_mode(NoiseMode::Anc, None),
-        "transparency" => handle.set_mode(NoiseMode::Transparency, None),
-        "off" => handle.set_mode(NoiseMode::Off, None),
         "open" => app_windows::show_flyout(app, None),
         "settings" => app_windows::open_settings(app),
         "reconnect" => handle.reconnect(),

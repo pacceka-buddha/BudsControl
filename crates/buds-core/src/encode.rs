@@ -15,13 +15,13 @@ pub const EQ_LIST_QUERY: [u8; 2] = [0x01, 0x05];
 pub const LOW_LATENCY_QUERY: [u8; 2] = [0x01, feature::LOW_LATENCY];
 
 /// 0x0404 payload: `01 01 <little-endian bitmask with only the mode's bit set>`.
-/// The mask is `bit / 8 + 1` bytes long.
+/// The mask is `bit / 8 + 1` bytes long. Built byte by byte, so any bit (the Developer tab can send
+/// up to 255) gives a valid mask instead of overflowing a shift.
 pub fn set_noise(bit: u8) -> Vec<u8> {
-    let mask: u32 = 1u32 << bit;
+    let byte = usize::from(bit) / 8;
     let mut payload = vec![0x01, 0x01];
-    for i in 0..=(usize::from(bit) / 8) {
-        payload.push(((mask >> (8 * i)) & 0xFF) as u8);
-    }
+    payload.resize(2 + byte + 1, 0);
+    payload[2 + byte] = 1 << (bit % 8);
     payload
 }
 

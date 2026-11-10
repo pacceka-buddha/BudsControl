@@ -11,7 +11,7 @@ use std::collections::HashSet;
 use std::io;
 use std::time::Duration;
 
-use bluer::rfcomm::{Profile, ReqError, Role, SocketAddr, Stream};
+use bluer::rfcomm::{Profile, ProfileHandle, ReqError, Role, SocketAddr, Stream};
 use bluer::{Address, Device, Session, Uuid};
 use buds_core::platform::{BtDevice, Link, LinkSink, LogDirection, LogFn, OpenError, Platform};
 use futures::StreamExt;
@@ -144,8 +144,9 @@ impl Platform for LinuxPlatform {
                 },
                 note,
             );
-            walked.map(|(candidate, stream)| {
-                let channel = stream
+            walked.map(|(candidate, opened)| {
+                let channel = opened
+                    .stream
                     .peer_addr()
                     .ok()
                     .map(|a| a.channel)
@@ -154,7 +155,7 @@ impl Platform for LinuxPlatform {
                     "connected via {candidate}{}",
                     channel.map_or(String::new(), |c| format!(" (channel {c})"))
                 ));
-                spawn_link(&runtime, stream, candidate, channel, sink)
+                spawn_link(&runtime, opened, candidate, channel, sink)
             })
         });
         match work.await {
@@ -185,6 +186,14 @@ impl Platform for LinuxPlatform {
     }
 }
 
+/// A connected RFCOMM socket. For a service connect it carries the BlueZ profile registration too:
+/// dropping that unregisters the profile, which may make BlueZ tear the connection down, so it has to
+/// live as long as the link.
+struct Opened {
+    stream: Stream,
+    profile: Option<ProfileHandle>,
+}
+
 /// Sets the flag when dropped: cancels a running connect when the controller drops the open.
 struct CancelOnDrop(watch::Sender<bool>);
 
@@ -202,7 +211,7 @@ async fn connect_candidate(
     advertised: &HashSet<Uuid>,
     candidate: Candidate,
     mut cancel: watch::Receiver<bool>,
-) -> Result<Stream, ConnectError> {
+) -> Result<Opened, ConnectError> {
     let attempt = async {
         match candidate {
             Candidate::HeyMelody => {
@@ -214,6 +223,10 @@ async fn connect_candidate(
             Candidate::Spp => through_profile(session, device, address, advertised, SPP).await,
             Candidate::Channel(channel) => Stream::connect(SocketAddr::new(address, channel))
                 .await
+                .map(|stream| Opened {
+                    stream,
+                    profile: None,
+                })
                 .map_err(|e| error_from_io(&e)),
         }
     };
@@ -232,7 +245,7 @@ async fn through_profile(
     address: Address,
     advertised: &HashSet<Uuid>,
     uuid: Uuid,
-) -> Result<Stream, ConnectError> {
+) -> Result<Opened, ConnectError> {
     if !advertised.contains(&uuid) {
         return Err(ConnectError {
             code: NOT_FOUND,
@@ -296,11 +309,15 @@ async fn through_profile(
                     request.reject(ReqError::Rejected);
                     continue;
                 }
-                return request.accept().map_err(|e| ConnectError {
+                let stream = request.accept().map_err(|e| ConnectError {
                     code: 0,
                     message: e.to_string(),
                     timed_out: false,
                     cancelled: false,
+                })?;
+                return Ok(Opened {
+                    stream,
+                    profile: Some(handle),
                 });
             }
         }
@@ -327,14 +344,20 @@ struct LinuxLink {
 
 fn spawn_link(
     runtime: &Handle,
-    mut stream: Stream,
+    opened: Opened,
     hint: Candidate,
     channel: Option<u8>,
     sink: LinkSink,
 ) -> LinuxLink {
     let (outgoing, mut queue) = mpsc::unbounded_channel::<Vec<u8>>();
     let (stop, mut stopped) = watch::channel(false);
+    let Opened {
+        mut stream,
+        profile,
+    } = opened;
     runtime.spawn(async move {
+        // Unregistered (dropped) only when this task ends, after the socket is shut down.
+        let _profile = profile;
         let mut buffer = [0u8; 1024];
         loop {
             tokio::select! {

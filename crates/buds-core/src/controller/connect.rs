@@ -380,10 +380,16 @@ impl<P: Platform> Controller<P> {
         }
         self.prev_connected = Some(connected.clone());
 
-        // The buds we're talking to went away (deviceDidDisconnect).
+        // The buds we're talking to went away (deviceDidDisconnect). Only when the list still has
+        // them, marked not connected: a paired device missing from the list altogether means the
+        // listing itself failed (Windows returns nothing on any error), and dropping a working link
+        // for that would be wrong. A link that really died closes itself or trips the reply watchdog.
         if self.link == LinkState::Connected
             && let Some(device) = &self.device
-            && !connected.contains(&device.address)
+            && self
+                .devices
+                .iter()
+                .any(|d| d.address == device.address && !d.connected)
         {
             let name = self.device_name.clone();
             self.info(&format!(

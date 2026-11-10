@@ -82,8 +82,12 @@ function keyName(code: string): string {
   return code
 }
 
-/** "Ctrl+Alt+KeyN" -> "Ctrl+Alt+N" (or "⌃⌥N" on a Mac). */
-export function display(accelerator: string, mac = false): string {
+/**
+ * "Ctrl+Alt+KeyN" -> "Ctrl+Alt+N", or "⌃⌥N" on a Mac. `os` is `get_platform`'s value (`windows`,
+ * `linux`, `macos`); the Windows key is "Win" on Windows and "Super" elsewhere.
+ */
+export function display(accelerator: string, os = 'windows'): string {
+  const mac = os === 'macos'
   const parts = accelerator.split('+')
   const key = keyName(parts[parts.length - 1])
   const mods = parts.slice(0, -1)
@@ -92,6 +96,6 @@ export function display(accelerator: string, mac = false): string {
     const order = ['Ctrl', 'Alt', 'Shift', 'Super']
     return order.filter((m) => mods.includes(m)).map((m) => symbols[m]).join('') + key
   }
-  const names: Record<string, string> = { Super: 'Win' }
+  const names: Record<string, string> = { Super: os === 'windows' ? 'Win' : 'Super' }
   return [...mods.map((m) => names[m] ?? m), key].join('+')
 }
