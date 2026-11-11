@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Buds Control",
   "version": "0.1.0",
-  "identifier": "io.github.nilcodes.budscontrol",
+  "identifier": "io.budscontrol.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -28,7 +28,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "publisher": "nilcodes",
+    "publisher": "Buds Control contributors",
     "copyright": "MIT License. Based on BudsControl by amarsakore.",
     "shortDescription": "Control OnePlus, OPPO and realme earbuds from the tray",
     "category": "Utility",

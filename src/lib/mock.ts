@@ -64,7 +64,7 @@ function base(): Snapshot {
     link: 'connected',
     deviceName: 'OnePlus Buds 4',
     productId: '065414',
-    address: '00:A4:1C:39:41:4A',
+    address: 'AA:BB:CC:DD:EE:FF',
     channel: 15,
     mode: 'transparency',
     level: null,
@@ -86,7 +86,7 @@ function base(): Snapshot {
     gestures: { left: side(true), right: side(false) },
     findingBuds: false,
     hosts: [
-      { address: 'AA:BB:CC:DD:EE:01', name: 'DESKTOP-5RT2K', connected: true, isThisHost: true },
+      { address: 'AA:BB:CC:DD:EE:01', name: 'MY-PC', connected: true, isThisHost: true },
       { address: '11:22:33:44:55:66', name: 'Pixel 9', connected: true, isThisHost: false },
     ],
     wearLeft: 'inEar',
@@ -210,7 +210,7 @@ let autostart = false
 let logPaused = false
 type Dir = 'sent' | 'received' | 'info'
 const log: { timeMs: number; direction: Dir; text: string }[] = ([
-  { direction: 'info', text: 'connecting to OnePlus Buds 4 (00:A4:1C:39:41:4A)' },
+  { direction: 'info', text: 'connecting to OnePlus Buds 4 (AA:BB:CC:DD:EE:FF)' },
   { direction: 'info', text: 'connected via HeyMelody service 079A' },
   { direction: 'sent', text: 'AA 07 00 00 00 01 01 00 00' },
   { direction: 'received', text: 'AA 10 00 00 00 81 01 09 00 00 FF 77 5A EA 67 0E 20 07' },
