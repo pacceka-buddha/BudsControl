@@ -1,8 +1,8 @@
 //! Finding the buds, opening and closing the control channel, retries, paging and presence
-//! tracking. Ported from the "Connection" section of `BudsController.swift`.
+//! tracking.
 //!
-//! Where Swift used IOBluetooth notifications (device connected / disconnected, wake from sleep)
-//! this polls: every health tick lists the paired devices and diffs them.
+//! Instead of OS notifications (device connected / disconnected, wake from sleep) this polls: every
+//! health tick lists the paired devices and diffs them.
 
 use std::collections::HashSet;
 use std::time::Duration;
@@ -269,7 +269,7 @@ impl<P: Platform> Controller<P> {
         self.wear.clear();
     }
 
-    // MARK: - Paging
+    // Paging
 
     /// Out of the case, the buds often reconnect only to the phone. Ask them to connect to this
     /// computer too. At most one attempt every 15 s; a page that never reported back stops
@@ -316,7 +316,7 @@ impl<P: Platform> Controller<P> {
         // On success the next device poll sees the buds connect and takes it from there.
     }
 
-    // MARK: - Presence (the polling replacement for Bluetooth notifications)
+    // Presence (polling stands in for Bluetooth notifications)
 
     /// Every few seconds: notice a computer wake-up, then ask for the device list.
     pub(super) fn health_tick(&mut self) {
@@ -357,7 +357,7 @@ impl<P: Platform> Controller<P> {
             self.connected_since.entry(*addr).or_insert(since);
         }
 
-        // New connection: the buds came out of the case or back in range (deviceDidConnect).
+        // New connection: the buds came out of the case or back in range.
         if let Some(previous) = self.prev_connected.take() {
             let arrived: Vec<[u8; 6]> = connected.difference(&previous).copied().collect();
             for addr in arrived {
@@ -380,7 +380,7 @@ impl<P: Platform> Controller<P> {
         }
         self.prev_connected = Some(connected.clone());
 
-        // The buds we're talking to went away (deviceDidDisconnect). Only when the list still has
+        // The buds we're talking to went away. Only when the list still has
         // them, marked not connected: a paired device missing from the list altogether means the
         // listing itself failed (Windows returns nothing on any error), and dropping a working link
         // for that would be wrong. A link that really died closes itself or trips the reply watchdog.

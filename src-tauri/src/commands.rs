@@ -194,7 +194,7 @@ pub fn export_log(state: State<AppState>) -> String {
 pub struct PlatformInfo {
     /// `windows`, `linux` or `macos`.
     pub os: String,
-    /// A Wayland session: no global shortcuts, and windows can't be positioned.
+    /// A Wayland session: no global shortcuts (the Shortcuts tab shows a hint instead).
     pub wayland: bool,
 }
 

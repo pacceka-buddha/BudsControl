@@ -1,4 +1,4 @@
-//! Persistent user settings (the Swift app's UserDefaults), stored as one JSON file.
+//! Persistent user settings, stored as one JSON file.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;

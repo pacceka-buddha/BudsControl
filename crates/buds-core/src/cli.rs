@@ -1,6 +1,6 @@
 //! The command-line commands, shared by `budsctl` (own controller) and the app's IPC server (live
-//! controller). Output format follows the Swift app's `--cli`, `--watch`, `--scan` and `--raw`
-//! modes (`main.swift`).
+//! controller). Output format follows the original app's `--cli`, `--watch`, `--scan` and `--raw`
+//! modes.
 //!
 //! ```text
 //! status | anc | transparency | off | smart | max | moderate | mild | adaptive | cycle

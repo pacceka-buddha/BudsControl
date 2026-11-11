@@ -9,6 +9,6 @@ export type PlatformInfo = {
  */
 os: string, 
 /**
- * A Wayland session: no global shortcuts, and windows can't be positioned.
+ * A Wayland session: no global shortcuts (the Shortcuts tab shows a hint instead).
  */
 wayland: boolean, };

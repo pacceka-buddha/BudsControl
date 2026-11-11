@@ -3,7 +3,7 @@
 
     python tools/convert_catalog.py [path/to/DeviceCatalog.swift] > crates/buds-core/src/catalog/generated.rs
 
-Default input: reference/upstream/Sources/DeviceCatalog.swift (the clone pinned in PLAN.md, Phase 0).
+Default input: reference/upstream/Sources/DeviceCatalog.swift (a clone of the upstream repository).
 Upstream generates that file from RawS-Music's HeyMelody profiles (Apache-2.0) and the Noctalia
 oppo-pods plugin (MIT); see THIRD_PARTY_NOTICES.md. Do not edit the output by hand; re-run this.
 

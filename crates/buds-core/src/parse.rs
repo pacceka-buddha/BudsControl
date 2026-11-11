@@ -1,8 +1,7 @@
 //! Pure decoders for reply and push payloads (`p` = frame payload, `p[0]` is usually a status byte
 //! where 0 means success). No state: the controller applies the results.
 //!
-//! Ported from the `parse*` methods of `BudsController.swift`. Every decoder keeps the Swift
-//! length guards, so truncated or odd payloads degrade the same way (stop early, never panic).
+//! Every decoder checks lengths: truncated or odd payloads stop early and never panic.
 
 use std::collections::BTreeSet;
 
@@ -82,7 +81,7 @@ pub fn battery(p: &[u8]) -> Option<BatteryUpdate> {
 }
 
 /// `<status> <count> (<side> <0 in case | 1 out of ear | 3 in ear>)*`. A value we don't know maps
-/// to `None`, which removes that side's entry (the Swift code assigned `nil` into a dictionary).
+/// to `None`, which removes that side's entry.
 pub fn wear(p: &[u8]) -> Option<Vec<(u8, Option<Wear>)>> {
     if p.len() < 2 {
         return None;

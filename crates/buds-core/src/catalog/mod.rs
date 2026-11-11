@@ -1,4 +1,4 @@
-//! Per-model facts: what each earbuds model supports. Ported from `Sources/Devices.swift`.
+//! Per-model facts: what each earbuds model supports.
 //! The 105 generated entries live in `generated.rs` (see `tools/convert_catalog.py`).
 
 #[rustfmt::skip] // generated; keeps `tools/convert_catalog.py` output byte-identical

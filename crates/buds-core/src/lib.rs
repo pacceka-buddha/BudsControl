@@ -1,5 +1,5 @@
-//! Platform-independent core of Buds Control: protocol, device catalog and (from Phase 2) the
-//! controller. No OS code lives here; see PLAN.md for the architecture.
+//! Platform-independent core of Buds Control: protocol, device catalog and the controller.
+//! No OS code lives here.
 
 pub mod catalog;
 pub mod cli;

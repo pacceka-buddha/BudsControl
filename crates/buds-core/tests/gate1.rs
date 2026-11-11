@@ -1,4 +1,4 @@
-//! Phase 1 gate: protocol framing, payload decoders/encoders and the device catalog.
+//! Protocol framing, payload decoders/encoders and the device catalog.
 //! Expected byte values are worked out by hand from the layouts in `docs/PROTOCOL.md`.
 
 use buds_core::catalog::{self, MODELS};

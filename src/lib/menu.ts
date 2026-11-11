@@ -1,4 +1,4 @@
-// Drop-down menus. Inside the app they are native Windows menus (right look, right behaviour); in a
+// Drop-down menus. Inside the app they are native OS menus; in a
 // plain browser (design review) a small in-page list stands in. While a native menu is open the
 // flyout is told not to hide when it loses focus to the menu.
 

@@ -103,7 +103,7 @@ pub enum Anchor {
     /// The pointer when the tray gives no icon position (Linux, where the tray menu opens the flyout).
     #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     Point(i32, i32),
-    /// Nowhere known, and windows can't be positioned (Wayland).
+    /// Nowhere known (the pointer could not be read): the middle of the work area.
     #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     Centered,
     /// Nowhere known: the bottom-right corner, where a tray usually is.

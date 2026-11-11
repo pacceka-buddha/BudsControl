@@ -1,5 +1,5 @@
-//! Drawing of the earbuds glyph and the battery ring: the tray icon (this crate renders it for any
-//! size and taskbar colour) and, later, the app icon. Pure software rendering with tiny-skia, so the
+//! Drawing of the earbuds glyph and the battery ring for the tray icon, at any size and taskbar
+//! colour. Pure software rendering with tiny-skia, so the
 //! output is the same everywhere and can be unit-tested pixel by pixel.
 
 use tiny_skia::{

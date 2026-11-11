@@ -1,13 +1,12 @@
 //! Domain types shared by the protocol code, the controller and the UI.
 //!
-//! Ported from `Sources/Protocol.swift`, `Sources/Devices.swift` and the value types nested in
-//! `BudsController.swift`. Everything the UI sees derives `Serialize` + `ts_rs::TS`; running
-//! `cargo test` regenerates the TypeScript in `src/lib/bindings/`.
+//! Everything the UI sees derives `Serialize` + `ts_rs::TS`; running `cargo test` regenerates the
+//! TypeScript in `src/lib/bindings/`.
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-// MARK: - Noise control
+// Noise control
 
 /// The three user-facing noise-control modes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
@@ -65,7 +64,7 @@ pub enum AncLevel {
 }
 
 impl AncLevel {
-    /// Declaration order of the Swift enum (`allCases`); the UI lists levels in this order.
+    /// Declaration order; the UI lists levels in this order.
     pub const ALL: [AncLevel; 5] = [
         AncLevel::Smart,
         AncLevel::Max,
@@ -151,7 +150,7 @@ pub mod mode_type {
     }
 }
 
-// MARK: - Equalizer
+// Equalizer
 
 /// A selectable EQ preset (built-in or custom).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -225,7 +224,7 @@ pub fn eq_preset_name(mode_type: u8) -> String {
     }
 }
 
-// MARK: - Gestures
+// Gestures
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -375,7 +374,7 @@ impl GestureAction {
         GestureAction::ALL.into_iter().find(|a| a.wire() == byte)
     }
 
-    /// CLI spelling, same as the Swift case names (`playPause`, `volumeUp`, ...).
+    /// CLI spelling (`playPause`, `volumeUp`, ...).
     pub fn key(self) -> &'static str {
         match self {
             GestureAction::None => "none",
@@ -410,7 +409,7 @@ impl GestureAction {
     }
 }
 
-// MARK: - Devices
+// Devices
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -459,7 +458,7 @@ impl DeviceFeature {
         }
     }
 
-    /// Name used by the `shows:` line of the CLI status block (matches the Swift case names).
+    /// Name used by the `shows:` line of the CLI status block.
     pub fn key(self) -> &'static str {
         match self {
             DeviceFeature::NoiseControl => "noiseControl",
@@ -472,7 +471,7 @@ impl DeviceFeature {
     }
 }
 
-// MARK: - Live state
+// Live state
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]

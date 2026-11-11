@@ -17,10 +17,7 @@ All notable changes to this project are listed here. The format follows
 - Linux (Wayland): the app starts through Xwayland when it can, so the flyout can be placed. It opens at the right end
   of the panel instead of the top-left corner. Set `GDK_BACKEND=wayland` to run natively. See
   [docs/LINUX.md](docs/LINUX.md) for the Wayland limitations (no global shortcuts, flyout not under the icon).
-
-### Tested
-
-- Linux: first run on real hardware (Ubuntu 24.04, GNOME, OnePlus Buds 4). Results in `docs/TESTING.md` (Gate 11).
+- Linux: first run on real hardware (Ubuntu 24.04, GNOME, OnePlus Buds 4); results are in `docs/TESTING.md` (Gate 11).
 
 ## [0.1.0] - 2026-11-11
 

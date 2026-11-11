@@ -114,7 +114,7 @@ pub trait Platform: Send + Sync + 'static {
     /// start a radio inquiry; it runs every couple of seconds.
     fn paired_devices(&self) -> impl Future<Output = Vec<BtDevice>> + Send;
 
-    /// Opens the control channel, trying this OS's candidate list (see PLAN.md 2.4). `hint` is the
+    /// Opens the control channel, trying this OS's candidate list. `hint` is the
     /// candidate that worked last time. The controller drops the returned future to cancel it, so
     /// implementations must release their socket when dropped.
     fn open(

@@ -1,7 +1,6 @@
-//! The controller: owns the link to the earbuds and all state shown in the UI. A direct port of
-//! `BudsController.swift`.
+//! The controller: owns the link to the earbuds and all state shown in the UI.
 //!
-//! It is a single-task actor (the Swift code lives on the main thread). Everything that happens
+//! It is a single-task actor. Everything that happens
 //! (user actions, platform results, timers, received bytes) is a [`Msg`] in one inbox, handled one
 //! at a time; the resulting [`Snapshot`] is published on a `watch` channel when it changes.
 
@@ -208,7 +207,7 @@ pub struct Controller<P: Platform> {
     state_tx: watch::Sender<Snapshot>,
     events: broadcast::Sender<Event>,
 
-    // --- State shown in the UI (the Swift @Published properties) ---
+    // --- State shown in the UI ---
     link: LinkState,
     device_name: String,
     product_id: Option<String>,
@@ -423,7 +422,7 @@ impl<P: Platform> Controller<P> {
         true
     }
 
-    // MARK: - Timers
+    // Timers
 
     /// (Re)starts a one-shot timer; scheduling a kind again cancels the previous one.
     fn schedule(&mut self, kind: TimerKind, after: Duration) {
@@ -488,7 +487,7 @@ impl<P: Platform> Controller<P> {
         }
     }
 
-    // MARK: - Public operations (ported from the Swift API)
+    // Public operations
 
     fn start(&mut self) {
         if self.started {
@@ -670,7 +669,7 @@ impl<P: Platform> Controller<P> {
         }
     }
 
-    // MARK: - Sending
+    // Sending
 
     /// Frames a request and writes it. A failed write reconnects.
     fn send(&mut self, command: u16, payload: Vec<u8>) {
@@ -702,7 +701,7 @@ impl<P: Platform> Controller<P> {
         self.schedule(TimerKind::ReplyWatchdog, REPLY_WATCHDOG);
     }
 
-    // MARK: - Small helpers
+    // Small helpers
 
     fn info(&self, text: &str) {
         self.log.append(LogDirection::Info, text);

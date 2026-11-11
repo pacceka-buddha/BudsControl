@@ -1,5 +1,5 @@
 //! Which RFCOMM service / channel to try, in which order, and when to give up. Pure logic shared by
-//! the OS backends (PLAN.md 2.4); only the actual connect call is platform specific.
+//! the OS backends; only the actual connect call is platform specific.
 
 use std::fmt;
 

@@ -1,6 +1,6 @@
 //! "Remember settings between connections": the buds reset their noise mode and low latency on
 //! their own (for example after going back in the case), so the app can put back what was last
-//! picked in it. Ported from the "Remembered settings" section of `BudsController.swift`.
+//! picked in it.
 
 use super::*;
 use crate::settings::Remembered;

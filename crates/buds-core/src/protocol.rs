@@ -7,7 +7,7 @@
 //! ```
 //!
 //! Responses use the request command with the high bit set (0x0106 -> 0x8106).
-//! Ported from `Sources/Protocol.swift`; see `docs/PROTOCOL.md`.
+//! See `docs/PROTOCOL.md`.
 
 /// Command numbers (from Gadgetbridge's OPPO support and RawS-Music's HeyMelody port).
 pub mod cmd {
@@ -188,7 +188,7 @@ impl FrameParser {
     }
 }
 
-// MARK: - Hex helpers (packet log, raw commands)
+// Hex helpers (packet log, raw commands)
 
 /// `AA 0B 00 ...` (uppercase, space separated).
 pub fn to_hex(bytes: &[u8]) -> String {

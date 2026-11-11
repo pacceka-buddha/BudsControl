@@ -1,5 +1,4 @@
-//! Reacting to what the buds send: replies and pushes. Ported from the "Frames" section of
-//! `BudsController.swift`; the byte layouts are decoded by `crate::parse`.
+//! Reacting to what the buds send: replies and pushes. The byte layouts are decoded by `crate::parse`.
 
 use tokio::time::Instant;
 

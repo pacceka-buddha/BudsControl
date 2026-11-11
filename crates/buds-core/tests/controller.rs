@@ -1,4 +1,4 @@
-//! Phase 2 gate: the controller against the simulated Buds 4, with tokio's paused clock so retry
+//! The controller against the simulated Buds 4, with tokio's paused clock so retry
 //! delays and watchdogs run instantly and deterministically.
 
 use std::sync::Arc;

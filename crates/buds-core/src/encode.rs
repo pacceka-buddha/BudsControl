@@ -1,5 +1,4 @@
-//! Builders for request payloads (the part after the frame header). Ported from the `send(...)`
-//! call sites in `BudsController.swift`.
+//! Builders for request payloads (the part after the frame header).
 
 use crate::protocol::{feature, push};
 use crate::types::{CustomEq, EarSide, Gesture, GestureAction};
@@ -57,8 +56,8 @@ pub fn set_custom_eq(eq: &CustomEq) -> Vec<u8> {
 }
 
 /// Copies `gains` onto the EQ's bands (clamped to the EQ's range); extra values are ignored and
-/// bands without a value keep theirs. Written as max-then-min (not `clamp`) like the Swift code, so
-/// a nonsensical range from the buds can't panic.
+/// bands without a value keep theirs. Written as max-then-min (not `clamp`) so a nonsensical range
+/// from the buds can't panic.
 #[allow(clippy::manual_clamp)]
 pub fn apply_gains(eq: &mut CustomEq, gains: &[i32]) {
     let (lo, hi) = (eq.min_gain, eq.max_gain);

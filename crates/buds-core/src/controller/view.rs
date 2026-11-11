@@ -1,5 +1,4 @@
-//! Values derived from the controller state (ported from the computed properties of
-//! `BudsController.swift`) and the published [`Snapshot`].
+//! Values derived from the controller state, and the published [`Snapshot`].
 
 use super::*;
 use crate::catalog::{self, DeviceModel};
