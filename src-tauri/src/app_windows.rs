@@ -34,7 +34,9 @@ pub fn create_flyout(app: &AppHandle) -> tauri::Result<()> {
         .shadow(true)
         .always_on_top(true)
         .skip_taskbar(true)
-        .resizable(false)
+        // Linux (X11): a non-resizable GTK window never shrinks below the largest size it has had, so
+        // collapsing the panel would leave a tall window. It has no decorations, so the user can't resize it.
+        .resizable(cfg!(target_os = "linux"))
         .maximizable(false)
         .minimizable(false)
         .visible(false)
@@ -155,6 +157,16 @@ pub fn show_flyout(app: &AppHandle, icon: Option<tauri::Rect>) {
         None => (Rect::new(0, 0, 1920, 1040), 1.0),
     };
 
+    // A bare pointer (Linux) is turned into a spot on the panel, so the flyout sits against the panel.
+    let anchor = match (anchor, &monitor) {
+        (Anchor::Point(x, y), Some(m)) => {
+            let (p, s) = (m.position(), m.size());
+            let mon = Rect::new(p.x, p.y, s.width as i32, s.height as i32);
+            positioning::panel_strip((x, y), mon, work).map_or(anchor, Anchor::Icon)
+        }
+        _ => anchor,
+    };
+
     let height = {
         let mut f = state.flyout.lock().unwrap();
         f.anchor = anchor;
@@ -198,12 +210,39 @@ fn apply_geometry(window: &WebviewWindow, anchor: Anchor, work: Rect, scale: f64
     let (x, y) = positioning::place_at(anchor, work, size, (MARGIN * scale).round() as i32);
     let _ = window.set_size(PhysicalSize::new(size.0 as u32, size.1 as u32));
     let _ = window.set_position(PhysicalPosition::new(x, y));
+    // X11: the window manager clamps the move to the screen using the *old* (taller) size, because the
+    // shrink has not happened yet; once it has, the window is left too high. Move again afterwards.
+    #[cfg(target_os = "linux")]
+    {
+        let window = window.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(80));
+            let _ = window.set_position(PhysicalPosition::new(x, y));
+        });
+    }
+}
+
+/// A Wayland session (also when the app itself runs through Xwayland).
+#[cfg(target_os = "linux")]
+pub fn is_wayland() -> bool {
+    std::env::var("XDG_SESSION_TYPE").is_ok_and(|v| v.eq_ignore_ascii_case("wayland"))
+        || std::env::var_os("WAYLAND_DISPLAY").is_some()
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn is_wayland() -> bool {
+    false
 }
 
 /// Linux: the tray gives no icon position and no click events (the flyout is opened from the tray menu),
-/// so the flyout appears at the pointer. Where the pointer can't be read (Wayland) it is centred.
+/// so the flyout appears at the pointer. On Wayland the pointer is unknown (through Xwayland it is stale
+/// whenever it is over a native window such as the shell's menu), so the flyout goes to the right end of
+/// the panel, where the tray is on GNOME and KDE: a point far to the right, snapped to the panel edge.
 #[cfg(target_os = "linux")]
 fn fresh_anchor(app: &AppHandle) -> Option<Anchor> {
+    if is_wayland() {
+        return Some(Anchor::Point(1_000_000, 0));
+    }
     Some(match app.cursor_position() {
         Ok(p) => Anchor::Point(p.x.round() as i32, p.y.round() as i32),
         Err(_) => Anchor::Centered,

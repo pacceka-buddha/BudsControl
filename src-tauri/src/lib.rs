@@ -46,7 +46,61 @@ fn fake_requested() -> bool {
     std::env::var("BUDS_FAKE").is_ok_and(|v| !v.is_empty() && v != "0")
 }
 
+/// The socket file of a local X display (`:0`, `:1.0`), or `None` for anything else (`host:0`, empty).
+#[cfg(target_os = "linux")]
+fn x_display_socket(display: &str) -> Option<std::path::PathBuf> {
+    let number: String = display
+        .strip_prefix(':')?
+        .chars()
+        .take_while(char::is_ascii_digit)
+        .collect();
+    (!number.is_empty()).then(|| std::path::PathBuf::from(format!("/tmp/.X11-unix/X{number}")))
+}
+
+/// Wayland: an app can't place its own windows there, so the flyout would land wherever the compositor
+/// likes (the top-left corner on GNOME). Run through Xwayland instead, where positioning works. Only when
+/// the user hasn't chosen a backend and the X display is really there: GTK aborts the app when it can't
+/// open the display it was told to use, so a stale `DISPLAY` must keep the native Wayland backend.
+/// Costs fractional-scaling sharpness.
+#[cfg(target_os = "linux")]
+fn prefer_xwayland() {
+    if std::env::var_os("WAYLAND_DISPLAY").is_none() || std::env::var_os("GDK_BACKEND").is_some() {
+        return;
+    }
+    let usable = std::env::var("DISPLAY")
+        .ok()
+        .and_then(|d| x_display_socket(&d))
+        .is_some_and(|socket| socket.exists());
+    if usable {
+        // SAFETY: the very first thing `main` does, before GTK or any thread exists.
+        unsafe { std::env::set_var("GDK_BACKEND", "x11") };
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod xwayland_tests {
+    use super::x_display_socket;
+    use std::path::PathBuf;
+
+    #[test]
+    fn local_displays_map_to_their_socket() {
+        assert_eq!(
+            x_display_socket(":0"),
+            Some(PathBuf::from("/tmp/.X11-unix/X0"))
+        );
+        assert_eq!(
+            x_display_socket(":12.0"),
+            Some(PathBuf::from("/tmp/.X11-unix/X12"))
+        );
+        assert_eq!(x_display_socket("host:0"), None);
+        assert_eq!(x_display_socket(""), None);
+        assert_eq!(x_display_socket(":"), None);
+    }
+}
+
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    prefer_xwayland();
     let app = tauri::Builder::default()
         // Must be first: a second launch tells the running app to show its flyout, then exits.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {

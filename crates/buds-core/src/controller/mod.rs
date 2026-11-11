@@ -682,8 +682,11 @@ impl<P: Platform> Controller<P> {
         self.log.append(LogDirection::Sent, &to_hex(&bytes));
         let result = self.link_handle.as_ref().map(|l| l.write(&bytes));
         if let Some(Err(error)) = result {
+            // Same as the remote closing the channel: close it (so the rest of a burst of requests is
+            // dropped instead of each failing) and retry on the timer. An immediate reconnect here looped
+            // every few ms when a link opened already dead (BlueZ accepts the RFCOMM connect, the buds drop it).
             self.info(&format!("write failed: {error}, reconnecting"));
-            let _ = self.tx.send(Msg::Action(Action::Reconnect));
+            self.link_closed();
         }
     }
 

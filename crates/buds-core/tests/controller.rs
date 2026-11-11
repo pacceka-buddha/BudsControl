@@ -342,6 +342,30 @@ async fn retries_back_off_1_2_3_5_8_8_seconds() {
     assert_eq!(r.snap().link, LinkState::Searching);
 }
 
+/// Regression (found on real Linux hardware): a link that opens already dead made every request of the
+/// post-connect burst fail, and each failure reconnected at once, ~25 open/close cycles in 300 ms.
+/// A failed write must follow the retry timer like any other closed channel.
+#[tokio::test(start_paused = true)]
+async fn a_link_that_opens_dead_is_retried_on_the_timer_not_in_a_loop() {
+    let r = rig();
+    r.fake.open_dead(true);
+    r.handle.start();
+    secs(10.0).await;
+    // One attempt per second at most (the first retry delay is 1 s), not a tight loop.
+    let opens = r.fake.open_count();
+    assert!(
+        (2..=12).contains(&opens),
+        "expected about one attempt per second, got {opens} in 10 s"
+    );
+    // Only the first failed write of a burst reports; the rest are dropped with the closed channel.
+    assert!(r.log_count("write failed") <= opens);
+
+    // Once the link is healthy again the connection settles.
+    r.fake.open_dead(false);
+    secs(15.0).await;
+    assert_eq!(r.snap().link, LinkState::Connected);
+}
+
 #[tokio::test(start_paused = true)]
 async fn silent_buds_trigger_a_reconnect_after_3_seconds() {
     let r = connected_rig().await;

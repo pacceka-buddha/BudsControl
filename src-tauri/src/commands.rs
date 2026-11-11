@@ -202,9 +202,7 @@ pub struct PlatformInfo {
 pub fn get_platform() -> PlatformInfo {
     PlatformInfo {
         os: std::env::consts::OS.to_string(),
-        wayland: cfg!(target_os = "linux")
-            && (std::env::var("XDG_SESSION_TYPE").is_ok_and(|v| v.eq_ignore_ascii_case("wayland"))
-                || std::env::var_os("WAYLAND_DISPLAY").is_some()),
+        wayland: app_windows::is_wayland(),
     }
 }
 

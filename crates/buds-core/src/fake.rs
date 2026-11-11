@@ -116,6 +116,9 @@ struct World {
     buds: Buds,
     open_hangs: bool,
     open_error: Option<String>,
+    /// `open` succeeds but the link is already dead, so every write fails (BlueZ accepting a connect the
+    /// buds immediately drop).
+    open_dead: bool,
     drop_replies: bool,
     ignore: HashSet<u16>,
     noise_reply_delay_once: Option<Duration>,
@@ -154,6 +157,7 @@ impl FakePlatform {
                 buds: Buds::buds4(),
                 open_hangs: false,
                 open_error: None,
+                open_dead: false,
                 drop_replies: false,
                 ignore: HashSet::new(),
                 noise_reply_delay_once: None,
@@ -222,6 +226,11 @@ impl FakePlatform {
     /// `open` fails with this message.
     pub fn fail_open(&self, message: Option<&str>) {
         self.world().open_error = message.map(str::to_string);
+    }
+
+    /// `open` succeeds, but the link it returns is already dead: every write fails.
+    pub fn open_dead(&self, yes: bool) {
+        self.world().open_dead = yes;
     }
 
     /// The remote side closes the control channel.
@@ -499,10 +508,10 @@ impl Platform for FakePlatform {
         sink: LinkSink,
         log: LogFn,
     ) -> Result<Box<dyn Link>, OpenError> {
-        let (hangs, error, connected) = {
+        let (hangs, error, connected, dead) = {
             let mut w = self.world();
             w.open_times.push(Instant::now());
-            (w.open_hangs, w.open_error.clone(), w.connected)
+            (w.open_hangs, w.open_error.clone(), w.connected, w.open_dead)
         };
         log(LogDirection::Info, "opening RFCOMM channel 15");
         if hangs {
@@ -515,7 +524,7 @@ impl Platform for FakePlatform {
         if !connected {
             return Err(OpenError("buds are not connected".into()));
         }
-        let open = Arc::new(Mutex::new(true));
+        let open = Arc::new(Mutex::new(!dead));
         {
             let mut w = self.world();
             w.sink = Some(sink.clone());

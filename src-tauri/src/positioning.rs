@@ -129,6 +129,36 @@ pub fn place_at(anchor: Anchor, work: Rect, size: (i32, i32), margin: i32) -> (i
     }
 }
 
+/// Linux gives no tray icon position, only the pointer (which is on the tray menu, well away from the
+/// panel). When the monitor reserves space for a panel, return a thin rectangle in that strip at the
+/// pointer's position, so the flyout can be placed against the panel exactly as for a real icon.
+pub fn panel_strip(point: (i32, i32), monitor: Rect, work: Rect) -> Option<Rect> {
+    let (px, py) = point;
+    let x = px.clamp(work.x, (work.right() - 1).max(work.x));
+    let y = py.clamp(work.y, (work.bottom() - 1).max(work.y));
+    if work.bottom() < monitor.bottom() {
+        Some(Rect::new(
+            x,
+            work.bottom(),
+            1,
+            monitor.bottom() - work.bottom(),
+        ))
+    } else if work.y > monitor.y {
+        Some(Rect::new(x, monitor.y, 1, work.y - monitor.y))
+    } else if work.x > monitor.x {
+        Some(Rect::new(monitor.x, y, work.x - monitor.x, 1))
+    } else if work.right() < monitor.right() {
+        Some(Rect::new(
+            work.right(),
+            y,
+            monitor.right() - work.right(),
+            1,
+        ))
+    } else {
+        None
+    }
+}
+
 /// A window of `size` opened at a point: centred on it horizontally, below it when there is room and
 /// above it otherwise, kept inside the work area.
 pub fn near_point(point: (i32, i32), work: Rect, size: (i32, i32), margin: i32) -> (i32, i32) {
@@ -262,6 +292,24 @@ mod tests {
     fn no_icon_uses_the_bottom_right_corner() {
         let p = place(None, WORK_BOTTOM, (300, 400), 12);
         assert_eq!((p.x, p.y), (1920 - 300 - 12, 1032 - 400 - 12));
+    }
+
+    #[test]
+    fn pointer_on_a_tray_menu_snaps_to_the_panel_strip() {
+        let monitor = Rect::new(0, 0, 1920, 1200);
+        // 48 px panel at the bottom, like Dash to Panel.
+        let work = Rect::new(0, 0, 1920, 1152);
+        let strip = panel_strip((980, 640), monitor, work).unwrap();
+        assert_eq!(strip, Rect::new(980, 1152, 1, 48));
+        let p = place(Some(strip), work, (320, 420), 8);
+        assert_eq!(p.edge, Edge::Bottom);
+        assert_eq!(p.y, 1152 - 420 - 8);
+        // Top bar only (stock GNOME).
+        let work = Rect::new(0, 32, 1920, 1168);
+        let strip = panel_strip((980, 640), monitor, work).unwrap();
+        assert_eq!(place(Some(strip), work, (320, 420), 8).edge, Edge::Top);
+        // No panel: fall back to the pointer.
+        assert_eq!(panel_strip((980, 640), monitor, monitor), None);
     }
 
     #[test]
