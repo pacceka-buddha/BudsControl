@@ -1,0 +1,60 @@
+name: Bug report
+description: Something doesn't work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The log and `budsctl devices` output contain Bluetooth device names and addresses;
+        replace them with placeholders if you'd rather keep them private.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Buds Control version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux
+        - macOS
+    validations:
+      required: true
+  - type: input
+    id: os-details
+    attributes:
+      label: OS details
+      description: Version; on Linux also distribution, desktop and X11 or Wayland.
+  - type: input
+    id: buds
+    attributes:
+      label: Earbud model
+      placeholder: OnePlus Buds 4
+    validations:
+      required: true
+  - type: textarea
+    id: status
+    attributes:
+      label: Output of `budsctl status` and `budsctl devices`
+      render: text
+  - type: textarea
+    id: log
+    attributes:
+      label: Relevant log lines
+      description: |
+        Windows: %LOCALAPPDATA%\BudsControl\BudsControl.log
+        Linux: ~/.local/share/BudsControl/BudsControl.log
+        macOS: ~/Library/Logs/BudsControl.log
+      render: text

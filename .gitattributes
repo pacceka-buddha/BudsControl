@@ -1,0 +1,11 @@
+* text=auto
+
+*.sh text eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+
+src/lib/bindings/** linguist-generated=true
+crates/buds-core/src/catalog/generated.rs linguist-generated=true

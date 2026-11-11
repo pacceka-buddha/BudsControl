@@ -1,0 +1,58 @@
+name: Hardware report
+description: Tell us how Buds Control works with your OS and earbuds (especially Linux, macOS, or models other than the Buds 4).
+labels: [hardware-report]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Reports that something works are just as useful as reports that it doesn't.
+        Replace Bluetooth device names and addresses with placeholders if you'd rather keep them private.
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux
+        - macOS
+    validations:
+      required: true
+  - type: input
+    id: os-details
+    attributes:
+      label: OS details
+      description: Version; on Linux also distribution, desktop and X11 or Wayland; on macOS Apple silicon or Intel.
+    validations:
+      required: true
+  - type: input
+    id: buds
+    attributes:
+      label: Earbud model
+    validations:
+      required: true
+  - type: checkboxes
+    id: works
+    attributes:
+      label: What worked?
+      options:
+        - label: The app connects to the buds
+        - label: Battery is shown
+        - label: Noise mode changes (ANC / Transparency / Off)
+        - label: ANC levels
+        - label: Equalizer
+        - label: Low latency
+        - label: Find my earbuds
+        - label: Gestures
+        - label: Global shortcuts
+        - label: Automatic reconnect
+        - label: "`budsctl`"
+  - type: textarea
+    id: notes
+    attributes:
+      label: What didn't work, or anything odd?
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Output of `budsctl status`, `budsctl devices` and `budsctl sdp`
+      render: text
