@@ -1,8 +1,8 @@
 # Hardware testing
 
-Real-hardware checks for Buds Control, run by the project owner with **OnePlus Buds 4** (product ID `065414`).
+Real-hardware checks for Buds Control, run with **OnePlus Buds 4** (product ID `065414`).
 Automated tests (`cargo test --workspace`) cover everything that doesn't need the buds; this list covers the rest.
-Fill in the **Result** column (pass / fail / note) and the date; re-run at Gates 3, 5, 9 and 10 (see [PLAN.md](PLAN.md)).
+Fill in the **Result** column (pass / fail / note) and the date; re-run at Gates 3, 5, 9 and 10.
 
 ## Gate 3: `budsctl` against the real buds (Phase 3)
 
@@ -14,18 +14,18 @@ Pair the buds in **Windows Settings > Bluetooth & devices**, take them out of th
 |---|---|---|---|
 | 3.1 | `budsctl devices` | the Buds 4 listed as `connected`, `buds: yes` |  pass 2026-11-10 (Buds 4 `connected`, `buds: yes`) |
 | 3.2 | `budsctl status` | `device:  OnePlus Buds 4 [065414] connected`, real L/R/case battery, current mode, EQ, low latency, gestures; exit code 0 |  pass 2026-11-10 (`[065414]`, L 100% R 100%, mode, EQ, gestures read; exit 0) |
-| 3.3 | `budsctl anc`, `budsctl transparency`, `budsctl off` | the mode audibly changes each time; `status` agrees |  pass 2026-11-10 (run by Claude, each command a fresh session, read back from the buds); the audible change itself is the owner's to confirm |
-| 3.4 | `budsctl smart`, `max`, `moderate`, `mild`, `adaptive` | each ANC level applies and reads back (`mode:    anc (<level>) [bit N]`) |  pass 2026-11-10 (run by Claude, each command a fresh session, read back from the buds): smart bit 7, max 4, moderate 5, mild 6, adaptive 11 |
+| 3.3 | `budsctl anc`, `budsctl transparency`, `budsctl off` | the mode audibly changes each time; `status` agrees |  pass 2026-11-10 (each command a fresh session, read back from the buds; the audible change was not checked) |
+| 3.4 | `budsctl smart`, `max`, `moderate`, `mild`, `adaptive` | each ANC level applies and reads back (`mode:    anc (<level>) [bit N]`) |  pass 2026-11-10 (each command a fresh session, read back from the buds): smart bit 7, max 4, moderate 5, mild 6, adaptive 11 |
 | 3.5 | `budsctl watch 30`, meanwhile take a bud out / put it back / use a gesture / long-press for a mode | pushes show up as `<- AA ... 04 02 ...` lines; `HOSTS` line lists the paired devices | |
 | 3.6 | `budsctl raw 0106` | a `-> AA 07 00 00 06 01 ..` line, then a `<- ..` line whose command bytes are `06 81` |  pass 2026-11-10 (reply `06 81`) |
-| 3.7 | `budsctl eq=1`, `budsctl eq=0` | EQ preset changes; `status` shows the preset name |  pass 2026-11-10 (run by Claude, each command a fresh session, read back from the buds): Vocal, Bass, Balanced |
-| 3.8 | `budsctl custom=0,2,4,2,0,-2` (needs a custom EQ on the buds) | band gains applied; `status` lists `62Hz:0 ...` |  pass 2026-11-10 (run by Claude, each command a fresh session, read back from the buds): Custom1 bands 0,2,4,2,0,-2 applied, then reset to 0 |
-| 3.9 | `budsctl lowlatency=on` then `off` | `status` shows `lowlat:  on` / `off` |  pass 2026-11-10 (run by Claude, each command a fresh session, read back from the buds) |
+| 3.7 | `budsctl eq=1`, `budsctl eq=0` | EQ preset changes; `status` shows the preset name |  pass 2026-11-10 (each command a fresh session, read back from the buds): Vocal, Bass, Balanced |
+| 3.8 | `budsctl custom=0,2,4,2,0,-2` (needs a custom EQ on the buds) | band gains applied; `status` lists `62Hz:0 ...` |  pass 2026-11-10 (each command a fresh session, read back from the buds): Custom1 bands 0,2,4,2,0,-2 applied, then reset to 0 |
+| 3.9 | `budsctl lowlatency=on` then `off` | `status` shows `lowlat:  on` / `off` |  pass 2026-11-10 (each command a fresh session, read back from the buds) |
 | 3.10 | `budsctl find=on` (**loud: take the buds out of your ears first**), then `find=off` | sound plays and stops | |
 | 3.11 | `budsctl gesture=left,doubleTap,next`, then a real double tap on the left bud | the tap now skips to the next track; set it back afterwards | |
 | 3.12 | Put the buds in the case, run `budsctl status` | `searching`, exit code 1, no hang (about 8 s) | |
 
-**Record in `docs/PROGRESS.md`** which candidate connected. `budsctl status` prints the packet log; the lines to look
+**Note** which candidate connected. `budsctl status` prints the packet log; the lines to look
 for are `trying ...` and `connected via ... (channel N)`. Expected: HeyMelody service 079A or 1107, or channel 15.
 The same text is in `%LOCALAPPDATA%\BudsControl\BudsControl.log`. **If no candidate connects, stop and report**
 (include that log).
@@ -83,8 +83,8 @@ The same text is in `%LOCALAPPDATA%\BudsControl\BudsControl.log`. **If no candid
 Needs a Linux machine with BlueZ and OnePlus / OPPO / realme buds, X11 and Wayland sessions if possible. Setup notes,
 known issues and the Wayland limitations are in [LINUX.md](LINUX.md).
 
-Run by Claude over SSH, with the owner at the laptop for the parts that need a person (buds in and out of the case or
-ears, looking at the screen). Binary built from source with `npx tauri build --no-bundle` (**the AppImage and .deb were
+Run over SSH with someone at the laptop for the parts that need hands (buds in and out of the case or ears, looking
+at the screen). Binary built from source with `npx tauri build --no-bundle` (**the AppImage and .deb were
 not tested**). Buds: OnePlus Buds 4, product ID `065414`.
 
 | # | Check | Result |
@@ -93,7 +93,7 @@ not tested**). Buds: OnePlus Buds 4, product ID `065414`.
 | 11.2 | `budsctl status` (app closed) connects and prints the state block | pass: connected via HeyMelody 079A, channel 15, in about 300 ms; battery, mode, EQ, gestures read |
 | 11.3 | Modes and ANC levels, EQ, low latency through the running app (`budsctl` hands over to it) | pass, read back from the buds. Mode changes are **rejected with `0E` while the buds are not in the ears** (see LINUX.md) |
 | 11.4 | Gestures: change three, read back, restore | pass |
-| 11.5 | Find earbuds start and stop | pass: both acknowledged and the owner heard the sound start and stop |
+| 11.5 | Find earbuds start and stop | pass: both acknowledged, and the sound was heard to start and stop |
 | 11.6 | Tray menu, flyout, Settings window (X11) | pass, after two fixes: the flyout sat far above the panel, and did not return to the panel edge after collapsing (X11 window sizing) |
 | 11.7 | Flyout placement under Dash to Panel, the stock top bar, and the top bar with a left dock | pass: bottom edge 12 px above a bottom panel; top edge 12 px below a top bar; stays put through expand and collapse |
 | 11.8 | Shortcuts on X11: record all four, trigger each from another window | pass: Ctrl+Alt+N / J / O set ANC / Transparency / Off, Ctrl+Alt+B cycled all three; the on-screen popup is a desktop notification that is replaced, not stacked (banner seen at the top right) |
@@ -103,7 +103,7 @@ not tested**). Buds: OnePlus Buds 4, product ID `065414`.
 | 11.12 | Wayland: global shortcut | does not fire (expected); a synthetic key press was used, so not conclusive |
 | 11.13 | Wayland: tray menu clicks, Settings window, "use `budsctl`" hint, closing the flyout by clicking elsewhere, shortcut notification | **not checked** |
 | 11.14 | The Release checklist rows (1-8, 11, 14, 16-18) by number | **not mapped**: the features were exercised, but not against that numbered list |
-| 11.15 | AppImage and .deb installs, "Launch at login" | **not tested** (an autostart entry did get created during testing; nobody is sure whether by a click of the owner or of the test script) |
+| 11.15 | AppImage and .deb installs, "Launch at login" | **not tested** (an autostart entry did get created during testing; it is not known whether by a click or by the test script) |
 
 If the connection fails: send the log (`~/.local/share/BudsControl/BudsControl.log`) and `budsctl sdp`.
 

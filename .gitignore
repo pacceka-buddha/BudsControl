@@ -13,7 +13,7 @@ npm-debug.log*
 /src-tauri/gen/schemas/
 /src-tauri/binaries/
 
-# Upstream macOS app, cloned for reference (see PLAN.md, Phase 0)
+# Upstream macOS app, cloned for reference
 /reference/
 
 # Logs
@@ -30,6 +30,10 @@ Thumbs.db
 
 # Claude Code local settings
 /.claude/
+
+# Planning and progress notes kept locally, not in the repository
+/docs/PLAN.md
+/docs/PROGRESS.md
 
 # Packaging output
 /release/
