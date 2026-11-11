@@ -49,6 +49,13 @@ model supports. Nothing is sent to the internet.
   <img src="docs/screenshots/real-settings-general.jpg" alt="Settings window" width="360">
 </p>
 
+The same app on Ubuntu 24.04 with GNOME:
+
+<p align="center">
+  <img src="docs/screenshots/linux-flyout-expanded.jpg" alt="The flyout on Ubuntu 24.04 (GNOME), above the panel" width="240">
+  <img src="docs/screenshots/linux-settings-general.jpg" alt="The Settings window on Ubuntu 24.04 (GNOME)" width="360">
+</p>
+
 ## Download and install
 
 Get the latest build from the [**Releases**](../../releases/latest) page. Pair your earbuds with the computer in the

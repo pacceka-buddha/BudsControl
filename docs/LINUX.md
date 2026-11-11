@@ -4,6 +4,11 @@ What works, what doesn't, and what to know when running Buds Control on Linux. F
 Ubuntu 24.04.5 LTS (GNOME 46, Intel laptop), OnePlus Buds 4, X11 and Wayland sessions. Test results are in
 [TESTING.md](TESTING.md) (Gate 11).
 
+<p align="center">
+  <img src="screenshots/linux-flyout-expanded.jpg" alt="The flyout on Ubuntu 24.04 (GNOME), above the panel" width="240">
+  <img src="screenshots/linux-settings-general.jpg" alt="The Settings window on Ubuntu 24.04 (GNOME)" width="360">
+</p>
+
 ## What was tested
 
 | Setup | Result |
