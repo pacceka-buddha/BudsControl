@@ -2,7 +2,7 @@
 
 Real-hardware checks for Buds Control, run by the project owner with **OnePlus Buds 4** (product ID `065414`).
 Automated tests (`cargo test --workspace`) cover everything that doesn't need the buds; this list covers the rest.
-Fill in the **Result** column (pass / fail / note) and the date; re-run at Gates 3, 5, 9 and 10 (see `PLAN.md`).
+Fill in the **Result** column (pass / fail / note) and the date; re-run at Gates 3, 5, 9 and 10 (see [PLAN.md](PLAN.md)).
 
 ## Gate 3: `budsctl` against the real buds (Phase 3)
 
@@ -78,17 +78,34 @@ The same text is in `%LOCALAPPDATA%\BudsControl\BudsControl.log`. **If no candid
    the release build; leave it idle for 5 minutes (Task Manager: about 0 % CPU).
 4. Tag `v0.1.0` and confirm the Release workflow attaches the setup exe and the portable zip.
 
-## Gate 11: Linux (nobody has run this on a real Linux desktop yet: all items are PENDING)
+## Gate 11: Linux (first run 2026-11-11 on Ubuntu 24.04.5, GNOME 46; partly done, see the notes)
 
-Needs a Linux machine with BlueZ and OnePlus / OPPO / realme buds, X11 and Wayland sessions if possible.
+Needs a Linux machine with BlueZ and OnePlus / OPPO / realme buds, X11 and Wayland sessions if possible. Setup notes,
+known issues and the Wayland limitations are in [LINUX.md](LINUX.md).
 
-1. `budsctl devices` lists the paired buds; `budsctl sdp` shows `HeyMelody 079A: advertised`.
-2. `budsctl status` (app closed) connects and prints the state block; then run the checklist above with the AppImage:
-   at least rows 1-8, 11, 14 (X11), 16, 17, 18.
-3. Tray menu: "Open Buds Control" opens the flyout at the pointer; clicking elsewhere closes it.
-4. Shortcut on X11: popup is a desktop notification that is replaced, not stacked. On Wayland the Shortcuts tab shows
-   the `budsctl` hint.
-5. If the connection fails: send the log (`~/.local/share/BudsControl/BudsControl.log`) and `budsctl sdp`.
+Run by Claude over SSH, with the owner at the laptop for the parts that need a person (buds in and out of the case or
+ears, looking at the screen). Binary built from source with `npx tauri build --no-bundle` (**the AppImage and .deb were
+not tested**). Buds: OnePlus Buds 4, product ID `065414`.
+
+| # | Check | Result |
+|---|---|---|
+| 11.1 | `budsctl devices` lists the paired buds; `budsctl sdp` shows `HeyMelody 079A: advertised` | pass: `connected`, `buds: yes`; 079A advertised, 1107 and serial port not advertised |
+| 11.2 | `budsctl status` (app closed) connects and prints the state block | pass: connected via HeyMelody 079A, channel 15, in about 300 ms; battery, mode, EQ, gestures read |
+| 11.3 | Modes and ANC levels, EQ, low latency through the running app (`budsctl` hands over to it) | pass, read back from the buds. Mode changes are **rejected with `0E` while the buds are not in the ears** (see LINUX.md) |
+| 11.4 | Gestures: change three, read back, restore | pass |
+| 11.5 | Find earbuds start and stop | pass: both acknowledged and the owner heard the sound start and stop |
+| 11.6 | Tray menu, flyout, Settings window (X11) | pass, after two fixes: the flyout sat far above the panel, and did not return to the panel edge after collapsing (X11 window sizing) |
+| 11.7 | Flyout placement under Dash to Panel, the stock top bar, and the top bar with a left dock | pass: bottom edge 12 px above a bottom panel; top edge 12 px below a top bar; stays put through expand and collapse |
+| 11.8 | Shortcuts on X11: record all four, trigger each from another window | pass: Ctrl+Alt+N / J / O set ANC / Transparency / Off, Ctrl+Alt+B cycled all three; the on-screen popup is a desktop notification that is replaced, not stacked (banner seen at the top right) |
+| 11.9 | Tray "Reconnect" | pass: reconnected in about 190 ms |
+| 11.10 | Real disconnect: buds into the case, wait, out again | pass after a fix. Before it, the app opened and closed the link about 25 times in 300 ms (each failed write reconnected at once); now one failed write, one timed retry, back in about 15 s. Regression test added |
+| 11.11 | Wayland session: app starts, connects, second launch opens the flyout, flyout position | pass with the Xwayland change: flyout at the right end of the panel. Without it GNOME put the flyout in the top-left corner |
+| 11.12 | Wayland: global shortcut | does not fire (expected); a synthetic key press was used, so not conclusive |
+| 11.13 | Wayland: tray menu clicks, Settings window, "use `budsctl`" hint, closing the flyout by clicking elsewhere, shortcut notification | **not checked** |
+| 11.14 | The Release checklist rows (1-8, 11, 14, 16-18) by number | **not mapped**: the features were exercised, but not against that numbered list |
+| 11.15 | AppImage and .deb installs, "Launch at login" | **not tested** (an autostart entry did get created during testing; nobody is sure whether by a click of the owner or of the test script) |
+
+If the connection fails: send the log (`~/.local/share/BudsControl/BudsControl.log`) and `budsctl sdp`.
 
 ## Gate 12: macOS (nobody has run this on a Mac yet: all items are PENDING)
 

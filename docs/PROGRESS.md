@@ -1,6 +1,6 @@
 # Progress
 
-Plan: [../PLAN.md](../PLAN.md). Update this file at the end of every phase with the gate evidence.
+Plan: [PLAN.md](PLAN.md). Update this file at the end of every phase with the gate evidence.
 
 ## Pinned versions (Phase 0)
 
@@ -27,7 +27,7 @@ Done. Gate 0 evidence:
 - `npm run check`: 0 errors, 0 warnings. `npm run build` emits `dist/{flyout,settings,hud}.html`.
 - `npm run tauri dev`: `budscontrol.exe` runs, a visible "Buds Control" window loads `flyout.html` via WebView2.
 - `npm run tauri build -- --debug` produces `target/debug/bundle/nsis/Buds Control_0.1.0_x64-setup.exe` (2.46 MiB).
-- Bundle identifier is the placeholder `io.github.nilcodes.budscontrol` (change in `src-tauri/tauri.conf.json` if wanted).
+- Bundle identifier: `io.budscontrol.desktop` (in `src-tauri/tauri.conf.json`).
 - Icons are still the Tauri defaults; Phase 10 generates the real ones.
 
 ## Phase 1: protocol, parsers, catalog
@@ -379,16 +379,16 @@ Gate 10 checks run on this PC (not in Windows Sandbox):
 
 Left for the owner / noted:
 - Windows Sandbox install check, 5-minute idle CPU, and the full hardware checklist on the release build (docs/TESTING.md).
-- The tag-triggered workflow has not run; push a tag `v0.1.0` to try it. The repository URL in `Cargo.toml` and the
-  README (`github.com/nilcodes/BudsControl`) is an assumption: correct it if the repo lives elsewhere.
+- The tag-triggered workflow has not run; push a tag `v0.1.0` to try it (see `docs/RELEASING.md`).
 - Builds are unsigned (SmartScreen warning); signing needs a certificate.
 - `BudsControl.exe` in the zip is the file Tauri patched with the installer type ("nsis"); harmless, only the updater
   looks at it (there is no updater).
 
 ## Phase 11: Linux
 
-Code complete, type-checked and linted for Linux, **not run on Linux**: this PC has no Linux (no WSL distribution, no
-Docker) and the repository has no remote, so CI hasn't run either. Hardware items are PENDING in docs/TESTING.md (Gate 11).
+Code complete, type-checked and linted for Linux. **First run on real Linux: 2026-11-11, see "Phase 11 follow-up" below**
+(it was written without any Linux machine: no WSL distribution, no Docker, no remote, so CI hadn't run either). Gate 11 in
+docs/TESTING.md has the results; the text of this section is the state before that run.
 
 What was built:
 - **Bluetooth backend** (`crates/buds-bt/src/linux`, `bluer` 0.17 with BlueZ over D-Bus). `paired_devices` lists paired
@@ -427,6 +427,43 @@ Left for the owner / noted:
   AppIndicator extension for any tray icon; AppImage autostart paths.
 - The GTK flyout loses focus handling differently on Wayland (compositor-dependent), so "closes when you click elsewhere"
   is unverified there.
+
+### Phase 11 follow-up: first run on real hardware (2026-11-11)
+
+Ubuntu 24.04.5 LTS, GNOME 46, Intel laptop, OnePlus Buds 4, driven by Claude over SSH (xdotool and scrot on X11,
+gnome-screenshot on Wayland) with the owner at the machine for the parts that need hands. Everything in Phase 11 that
+needed Linux was run except the AppImage / .deb and CI; results are in Gate 11 of docs/TESTING.md, the setup notes and
+limitations are in [LINUX.md](LINUX.md). The Bluetooth backend worked first time: HeyMelody 079A, RFCOMM channel 15,
+connected in about 300 ms.
+
+Bugs found on the hardware and fixed:
+- **Reconnect storm.** A link that BlueZ opened but the buds had already dropped made every request of the post-connect
+  burst fail, and each failed write queued `Action::Reconnect`, which resets the retry counter and connects at once: about
+  25 open/close cycles in 300 ms. `send` now treats a failed write like a closed channel (`link_closed`: close, retry on
+  the timer). Regression test `a_link_that_opens_dead_is_retried_on_the_timer_not_in_a_loop` (new fake switch
+  `FakePlatform::open_dead`); without the fix that test never finishes.
+- **Flyout position (X11).** The flyout was anchored to the pointer, which is on the tray menu, about 250 px above the
+  panel. `positioning::panel_strip` now turns the pointer into a spot on the panel strip (the part of the monitor the
+  work area leaves out), so the existing icon placement puts the flyout against the panel on any edge. Checked with Dash to
+  Panel (bottom), the stock top bar, and the top bar with a fixed left dock.
+- **Flyout never shrank (X11).** A non-resizable GTK window keeps the largest size it has had, so collapsing left a tall
+  window that the window manager pushed up. The flyout is resizable on Linux (it has no frame). The window manager also
+  clamps a move using the old taller size, so the position is applied again 80 ms after each resize.
+- **Wayland position.** An app can't place its own window on Wayland (GNOME used the top-left corner). `prefer_xwayland`
+  sets `GDK_BACKEND=x11` on Wayland sessions when the user hasn't chosen a backend and the X socket exists (a stale
+  `DISPLAY` must not make GTK abort), and the flyout is anchored at the right end of the panel because the pointer is
+  unknown. `get_platform` and the anchor code share `app_windows::is_wayland`.
+
+Findings not fixed (also in LINUX.md): the buds refuse a noise-mode change with status `0E` while out of the ears and the
+UI says nothing; GNOME shows "Buds Control Settings is ready" because Settings opens without focus; the Wayland limits
+(no global shortcuts, flyout at the panel's right end rather than under the icon, Xwayland blur on fractional scaling);
+`npm ci` on a lockfile written on Windows lacks the Rolldown Linux binding; a plain `cargo build --release` produces an app
+without its web UI (use `npx tauri build --no-bundle`).
+
+Not verified on Wayland: tray menu clicks, the Settings window, the `budsctl` hint text, closing the flyout by clicking
+elsewhere, the notification. Not tested at all: AppImage, .deb, "Launch at login", other distributions and desktops.
+Checks on both PCs after the changes: `cargo fmt --check`, `cargo clippy --workspace --all-targets --all-features -- -D
+warnings` and `cargo test --workspace --all-features` pass on Windows and on the Ubuntu laptop.
 
 ## Phase 12: macOS
 

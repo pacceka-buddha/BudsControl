@@ -1,79 +1,111 @@
 # Buds Control
 
-A tray app for switching **Noise Cancellation**, **Transparency** and **Off** on OnePlus, OPPO and realme earbuds
-without the phone app. A Windows-first port (Linux and macOS to follow) of
-[amarsakore/BudsControl](https://github.com/amarsakore/BudsControl), built with Rust + Tauri 2 and Svelte.
+**Control OnePlus, OPPO and realme earbuds from your PC's tray, without the phone app.**
 
-> **Status:** the Windows build is tested with OnePlus Buds 4. The Linux and macOS builds compile and pass the checks
-> but have not been run on real machines yet (help wanted, see below). On a Mac the
-> [original app](https://github.com/amarsakore/BudsControl) is the tested choice.
-> See [PLAN.md](PLAN.md) and [docs/PROGRESS.md](docs/PROGRESS.md).
+Switch **Noise Cancellation**, **Transparency** and **Off** in one click, pick the ANC level, check the battery, change
+the equalizer and more. Buds Control is a cross-platform port of
+[amarsakore/BudsControl](https://github.com/amarsakore/BudsControl) (a macOS app), built with Rust, Tauri 2 and Svelte.
+
+<p align="center">
+  <img src="docs/screenshots/real-expanded-anc-dark.jpg" alt="The Buds Control flyout open above the Windows taskbar" width="720">
+</p>
+
+| Platform | Status |
+|---|---|
+| **Windows 10 / 11** (x64) | Tested on real hardware (OnePlus Buds 4) |
+| **Linux** (x64) | Tested once on real hardware (Ubuntu 24.04, GNOME, OnePlus Buds 4; X11 and Wayland). See [Linux notes](docs/LINUX.md) for the Wayland limitations and known issues; reports welcome |
+| **macOS 11+** (Apple silicon, Intel) | Builds and passes the checks; **not yet tested on hardware**, reports welcome. The [original app](https://github.com/amarsakore/BudsControl) is the tested choice on a Mac |
+
+## Contents
+
+- [Features](#features)
+- [Download and install](#download-and-install)
+- [Using it](#using-it)
+- [Command line (`budsctl`)](#command-line-budsctl)
+- [Troubleshooting](#troubleshooting)
+- [How it works](#how-it-works)
+- [Building from source](#building-from-source)
+- [Contributing](#contributing)
+- [Credits](#credits) · [Disclaimer](#disclaimer) · [License](#license)
 
 ## Features
 
 - One-click **noise control** (ANC, Transparency, Off) and the five **ANC levels** (Smart, Max, Moderate, Mild,
-  Adaptive) where the model has them; battery for the left bud, right bud and case.
-- **Tray icon** that shows the battery as a ring (with a charging bolt) and follows the Windows light/dark taskbar.
+  Adaptive) where the model has them.
+- **Battery** for the left bud, right bud and case, also shown as a ring on the **tray icon** (with a charging bolt),
+  following the light/dark taskbar.
 - **Equalizer** presets and custom EQ, **low latency** mode, **find my earbuds**, **touch gestures**.
 - **Global shortcuts** (cycle / ANC / Transparency / Off) with a small on-screen popup.
-- **Automatic reconnect** when the buds only joined your phone, optional **remembered settings**, **launch at
+- **Automatic reconnect** when the buds joined only your phone, optional **remembered settings**, **launch at
   login**.
-- **`budsctl`**, a command-line tool that controls the buds directly, or asks the running app to.
+- **`budsctl`**, a command-line tool that controls the buds directly or through the running app.
 - Developer tools: packet log, raw commands, service discovery.
 
-105 models of the OnePlus Buds, OPPO Enco and realme Buds families are known; the feature set shown follows the model.
+105 models of the OnePlus Buds, OPPO Enco and realme Buds families are known; the controls shown follow what the
+model supports. Nothing is sent to the internet.
 
-## Install (Windows 10 / 11, x64)
+<p align="center">
+  <img src="docs/screenshots/real-custom-eq-sliders.jpg" alt="Custom equalizer sliders" width="360">
+  <img src="docs/screenshots/real-settings-general.jpg" alt="Settings window" width="360">
+</p>
 
-Download from the [Releases](https://github.com/nilcodes/BudsControl/releases) page. Pair your buds in
-*Settings > Bluetooth & devices* first.
+## Download and install
 
-- **Installer** (`BudsControl-<version>-windows-x64-setup.exe`): installs for the current user, no administrator
-  rights needed, adds a Start menu entry and an uninstaller. It needs the Microsoft Edge WebView2 runtime (already part
-  of Windows 11 and up-to-date Windows 10; the installer downloads it if missing).
-- **Portable** (`BudsControl-<version>-windows-x64-portable.zip`): unzip anywhere and run `BudsControl.exe`;
-  `budsctl.exe` sits next to it.
+Get the latest build from the [**Releases**](../../releases/latest) page. Pair your earbuds with the computer in the
+system's Bluetooth settings **before** starting Buds Control.
 
-The builds are **not code-signed**, so Windows SmartScreen shows "Windows protected your PC": choose **More info >
-Run anyway**.
+### Windows
 
-Windows hides new tray icons in the overflow ("^") next to the clock. To keep Buds Control visible, drag its icon
-onto the taskbar, or turn it on under *Settings > Personalization > Taskbar > Other system tray icons*.
+| File | What it is |
+|---|---|
+| `BudsControl-<version>-windows-x64-setup.exe` | Installer. Installs for the current user (no administrator rights), adds a Start menu entry and an uninstaller. |
+| `BudsControl-<version>-windows-x64-portable.zip` | Portable. Unzip anywhere and run `BudsControl.exe`; `budsctl.exe` sits next to it. |
 
-![The flyout](docs/screenshots/real-expanded-anc-dark.jpg)
+- Needs the Microsoft Edge **WebView2** runtime (part of Windows 11 and up-to-date Windows 10; the installer
+  downloads it if missing).
+- The builds are **not code-signed**, so SmartScreen shows "Windows protected your PC": choose **More info > Run
+  anyway**.
+- Windows hides new tray icons behind the **^** arrow next to the clock. To keep Buds Control visible, drag its icon
+  onto the taskbar, or turn it on under *Settings > Personalization > Taskbar > Other system tray icons*.
 
-Click the tray icon for the flyout; right-click for the menu (modes, Settings, Reconnect, Quit). Starting the
-app again just opens the flyout.
+### Linux (tested once on Ubuntu 24.04; see [docs/LINUX.md](docs/LINUX.md))
 
-## Linux (untested on hardware)
+| File | What it is |
+|---|---|
+| `BudsControl-<version>-linux-x64.AppImage` | Runs on most distributions: `chmod +x` it and start it. |
+| `BudsControl-<version>-linux-x64.deb` | Debian / Ubuntu: `sudo apt install ./BudsControl-*.deb` |
 
-Needs BlueZ (`bluetoothd` running) and a desktop with a system tray (KDE, XFCE, Cinnamon, or GNOME with the AppIndicator
-extension). Pair the buds in your desktop's Bluetooth settings first.
+- Needs BlueZ (`bluetoothd` running) and a desktop with a system tray (KDE, XFCE, Cinnamon, or GNOME with the
+  AppIndicator extension).
+- Buds Control talks to BlueZ over D-Bus, so your user must be allowed to use Bluetooth (on some distributions that
+  means being in the `bluetooth` group).
 
-- **AppImage** (`BudsControl-<version>-linux-x64.AppImage`): `chmod +x` it and run. **.deb**
-  (`BudsControl-<version>-linux-x64.deb`): `sudo apt install ./BudsControl-*.deb`.
-- Linux trays don't report clicks, so everything starts from the tray menu: **Open Buds Control** opens the flyout at
-  the mouse pointer (centred on Wayland).
-- Mode changes made with a shortcut show a desktop notification instead of the popup. Global shortcuts work on X11
-  only; on Wayland bind keys to `budsctl cycle` (or `anc`, `transparency`, `off`) in your desktop's keyboard settings.
-- Buds Control talks to BlueZ over D-Bus, so you must be allowed to use Bluetooth (on some distributions that means
-  being in the `bluetooth` group). `budsctl sdp` shows which services BlueZ knows for your buds.
-- If you try it, please report what happened (`budsctl status`, the log at `~/.local/share/BudsControl/BudsControl.log`).
+### macOS (untested on hardware)
 
-## macOS (untested on hardware)
+- Download `BudsControl-<version>-macos-arm64.dmg` (Apple silicon) or `BudsControl-<version>-macos-x64.dmg` (Intel)
+  and drag the app to *Applications*.
+- The app is signed ad hoc, not notarised. The first time, right-click the app and choose **Open** (or run
+  `xattr -dr com.apple.quarantine /Applications/BudsControl.app`).
+- macOS asks once for permission to use Bluetooth; allow it.
 
-macOS 11 or later, Apple silicon or Intel. Pair the buds in *System Settings > Bluetooth* first.
+## Using it
 
-- Download `BudsControl-<version>-macos-arm64.dmg` (Apple silicon) or `-x64.dmg` (Intel) and drag the app to
-  *Applications*. It is signed ad hoc, not notarised: the first time, right-click the app and choose **Open**
-  (or run `xattr -dr com.apple.quarantine /Applications/BudsControl.app`).
-- macOS asks once for permission to use Bluetooth; allow it. The app lives in the menu bar (no Dock icon): click the
-  icon for the flyout, right-click or Control-click for the menu.
-- The connection code follows the original app (the buds' "enco link" service record, the HeyMelody UUIDs, then
-  channels 15, 12, 13), using IOBluetooth. `budsctl` works as on Windows.
-- If you try it, please report what happened (`budsctl status`, the log at `~/Library/Logs/BudsControl.log`).
+| | Windows | Linux | macOS |
+|---|---|---|---|
+| Open the flyout | click the tray icon | tray menu > **Open Buds Control** | click the menu-bar icon |
+| Menu (modes, Settings, Reconnect, Quit) | right-click the tray icon | click the tray icon | right-click or Control-click |
+| Shortcut popup | on-screen popup | desktop notification | on-screen popup |
 
-## Command line
+Starting the app a second time just opens the flyout. Shortcuts are set under **Settings > Shortcuts**.
+
+On Linux, global shortcuts work on X11 only. On Wayland, bind keys to `budsctl cycle` (or `anc`, `transparency`,
+`off`) in your desktop's keyboard settings instead. Also on Wayland, the app runs through Xwayland so it can place the
+flyout, which opens at the right end of the panel instead of under the tray icon. The earbuds only accept a noise-mode
+change while they are in your ears. Details and other known issues: [docs/LINUX.md](docs/LINUX.md).
+
+## Command line (`budsctl`)
+
+`budsctl` ships with the app (next to `BudsControl.exe`, or inside the app bundle).
 
 ```text
 budsctl status                 show the buds' state
@@ -83,55 +115,109 @@ budsctl eq=1   lowlatency=on   find=on   gesture=left,doubleTap,next
 budsctl devices | sdp | audio  diagnostics (paired devices, services, audio endpoints)
 ```
 
-The buds accept only one control connection, so when the tray app is running `budsctl` hands the command to it (named
-pipe `\\.\pipe\budscontrol-<user>`) and prints the same output; `--direct` forces a direct connection. `budsctl
---help` lists everything, `--fake` tries the commands on simulated buds.
+The buds accept only one control connection, so while the tray app is running `budsctl` hands the command to it and
+prints the same output; `--direct` forces a direct connection. `budsctl --help` lists everything, and `--fake` tries
+the commands on simulated buds.
+
+## Troubleshooting
+
+- **"Not connected"**: make sure the buds are out of the case and connected to *this* computer (not only to your
+  phone). Use **Reconnect** in the menu, or turn on *Reconnect buds to this PC automatically* in Settings.
+- **A mode change is ignored**: some models don't have every mode or level; the flyout shows only what the model
+  reports.
+- **Shortcut shows "Used by another app"**: another program has registered that key combination; pick another.
+- **Collecting details for a bug report**: run `budsctl status` and `budsctl devices`, and attach the log file:
+
+| OS | Log file |
+|---|---|
+| Windows | `%LOCALAPPDATA%\BudsControl\BudsControl.log` |
+| Linux | `~/.local/share/BudsControl/BudsControl.log` |
+| macOS | `~/Library/Logs/BudsControl.log` |
+
+The log contains your Bluetooth device names and addresses; remove them before posting if you prefer.
 
 ## How it works
 
 The earbuds speak the HeyMelody protocol over a classic Bluetooth RFCOMM channel (service `079A`, channel 15 on the
-Buds 4). Buds Control opens that channel with Winsock, asks for state and sends framed commands; see
-[docs/PROTOCOL.md](docs/PROTOCOL.md). When the buds are connected only to your phone, a reconnect request to the
-Windows Bluetooth audio driver (the same thing the volume flyout does) brings them to the PC. Nothing is sent to the
-internet, and nothing is changed on the buds besides what you ask for.
+Buds 4). Buds Control opens that channel (Winsock on Windows, BlueZ on Linux, IOBluetooth on macOS), asks for the
+state and sends framed commands. When the buds are connected only to your phone, a reconnect request to the system's
+Bluetooth audio driver brings them to the computer. Nothing is changed on the buds besides what you ask for.
 
-## Development
+Details: [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
-Needs Rust (stable, MSVC toolchain on Windows), Node 20+ and the Visual Studio C++ Build Tools.
+## Building from source
 
-```powershell
+Requirements: Rust (stable; MSVC toolchain and the Visual Studio C++ Build Tools on Windows) and Node 20+. On Linux
+also: `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev pkg-config patchelf libssl-dev
+libxdo-dev`.
+
+```bash
 npm install
-npm run check          # svelte-check + tsc
-cargo build --workspace
-npm run tauri dev      # opens the app (set BUDS_FAKE=1 to use simulated buds)
+npm run tauri dev          # run the app (set BUDS_FAKE=1 to use simulated buds)
 ```
 
-Release builds go to `release/`: `./scripts/package-windows.ps1` (installer + portable zip);
-`./scripts/package-linux.sh` (AppImage + .deb; needs `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
-librsvg2-dev libdbus-1-dev pkg-config patchelf libssl-dev libxdo-dev`); `./scripts/package-macos.sh` (.dmg for this
-Mac's architecture). The app icon comes from
-`cargo run -p icongen -- app-icon.png` followed by `npx tauri icon app-icon.png`.
+Checks:
 
-Design review without the app or the buds: `npm run dev`, then open
-`http://localhost:1420/flyout.html?scenario=<name>&more=1` in a browser (scenarios: connected, anc, customeq,
-disconnected, connecting, lowbattery, charging, finding, longeq, minimal, noanc). A built-in simulator answers the
-app's commands there. `npm test` runs the frontend unit tests.
+```bash
+npm run check              # svelte-check + tsc
+npm test                   # frontend unit tests
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+```
 
-Development switches: `BUDS_FAKE=1` runs the app against simulated buds, `BUDS_FAKE_SWEEP=1` (with it) sweeps the
-battery level ten times a second, and `BUDS_TASKBAR_THEME=light|dark` forces the tray icon's colour. The icon
-contact sheet is regenerated with `cargo run -p buds-art --example contact_sheet -- docs/screenshots/tray-icons.png`.
+Release packages go to `release/`:
 
-The original macOS app is cloned to `reference/upstream/` (gitignored) at commit `298d452` for porting.
+| OS | Command | Output |
+|---|---|---|
+| Windows | `./scripts/package-windows.ps1` | installer + portable zip |
+| Linux | `./scripts/package-linux.sh` | AppImage + .deb |
+| macOS | `./scripts/package-macos.sh` | .dmg for the Mac's architecture |
+
+Pushing a `v*` tag builds all of them on GitHub Actions and attaches them to a release; see
+[docs/RELEASING.md](docs/RELEASING.md).
+
+### Project layout
+
+| Path | What it is |
+|---|---|
+| `crates/buds-core` | Protocol, parsers, device catalog, controller, settings, IPC (no OS code) |
+| `crates/buds-bt` | Bluetooth backends for Windows, Linux and macOS |
+| `crates/budsctl` | Command-line tool |
+| `crates/buds-art` | Tray icon drawing |
+| `crates/icongen` | App icon generator |
+| `src-tauri` | The Tauri app: tray, windows, shortcuts, popup |
+| `src` | Svelte frontend (flyout, settings, popup) |
+| `docs` | Protocol notes, hardware checklist, design plan and progress log |
+
+### Without the buds
+
+- `BUDS_FAKE=1 npm run tauri dev` runs the app against simulated buds (`BUDS_FAKE_SWEEP=1` also sweeps the battery
+  level).
+- `npm run dev`, then open `http://localhost:1420/flyout.html?scenario=<name>&more=1` in a browser to review the UI.
+  Scenarios: `connected`, `anc`, `customeq`, `disconnected`, `connecting`, `lowbattery`, `charging`, `finding`,
+  `longeq`, `minimal`, `noanc`.
+- `BUDS_TASKBAR_THEME=light|dark` forces the tray icon colour.
+
+Regenerating assets: the app icon with `cargo run -p icongen -- app-icon.png` then `npx tauri icon app-icon.png`; the
+tray icon contact sheet with `cargo run -p buds-art --example contact_sheet -- docs/screenshots/tray-icons.png`.
+
+## Contributing
+
+Bug reports, hardware reports (especially from **Linux** and **macOS**, and from earbud models other than the Buds 4)
+and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Credits
 
-- [amarsakore](https://github.com/amarsakore) and contributors of the original BudsControl.
-- Protocol references: the Noctalia `oppo-pods` plugin (MIT), Gadgetbridge's OPPO support, and RawS-Music's
-  HeyMelody port (Apache-2.0). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+- [amarsakore](https://github.com/amarsakore) and the contributors of the original
+  [BudsControl](https://github.com/amarsakore/BudsControl).
+- Protocol references: the Noctalia `oppo-pods` plugin (MIT), Gadgetbridge's OPPO support, and RawS-Music's HeyMelody
+  port (Apache-2.0). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Disclaimer
 
-Unofficial project, not affiliated with or endorsed by OnePlus, OPPO, realme or Microsoft. Use at your own risk.
+Unofficial project, not affiliated with or endorsed by OnePlus, OPPO, realme, Microsoft or Apple. All product names
+are trademarks of their owners. Use at your own risk.
 
 ## License
 
