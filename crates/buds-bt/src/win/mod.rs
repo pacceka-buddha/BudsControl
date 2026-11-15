@@ -51,9 +51,14 @@ impl WindowsPlatform {
 
 impl Platform for WindowsPlatform {
     async fn paired_devices(&self) -> Vec<BtDevice> {
-        tokio::task::spawn_blocking(devices::list_paired)
-            .await
-            .unwrap_or_default()
+        // The Bluetooth enumeration is a blocking Win32 call with no timeout of its own. If it ever
+        // hangs (stack not ready after boot or resume) the controller would wait for this list forever,
+        // with no retry timer running. Give up after a while so it falls back to its normal retry.
+        let list = tokio::task::spawn_blocking(devices::list_paired);
+        match tokio::time::timeout(Duration::from_secs(15), list).await {
+            Ok(joined) => joined.unwrap_or_default(),
+            Err(_) => Vec::new(),
+        }
     }
 
     async fn open(
