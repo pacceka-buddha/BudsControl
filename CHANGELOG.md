@@ -12,6 +12,14 @@ All notable changes to this project are listed here. The format follows
   gesture, phone app) now shows up at once (`0x0504` push). Both follow upstream 1.3.4.
 - When the control channel can't be opened, the app now waits longer between tries (6 s, 12 s, up to 5 min) after two
   failures in a row, instead of retrying every 8 s forever. Asking to reconnect skips the wait. Follows upstream 1.3.5.
+- macOS: `budsctl` could not hand commands to the running app, so the two fought over the buds' single control channel.
+  The app's command socket path was longer than macOS's 104-byte limit and was never created; a short fallback path
+  is now used when the usual one does not fit.
+- A control-channel timeout on the remembered connection method no longer falls through to the serial port (channel
+  12). On OnePlus Buds 3 that channel opens but the buds never answer, which showed as a blank status and `-1%`
+  battery; the app now retries the right channel instead.
+- macOS: a control channel that does not open is given up on after 3 s instead of 5 s (as the original app does), so
+  the first connect is about 2 s quicker.
 - Windows: listing the paired devices gives up after 15 s, so a hung Bluetooth call can't leave the app stuck at start-up.
 - Linux: after the buds dropped, the app reconnected in a tight loop (about 25 open/close cycles in 300 ms) instead of
   waiting between attempts. A failed write now follows the normal retry timer.
@@ -24,6 +32,9 @@ All notable changes to this project are listed here. The format follows
   of the panel instead of the top-left corner. Set `GDK_BACKEND=wayland` to run natively. See
   [docs/LINUX.md](docs/LINUX.md) for the Wayland limitations (no global shortcuts, flyout not under the icon).
 - Linux: first run on real hardware (Ubuntu 24.04, GNOME, OnePlus Buds 4); results are in `docs/TESTING.md` (Gate 11).
+- macOS: first run on real hardware (macOS 27, Apple silicon, OnePlus Buds 3); results are in `docs/TESTING.md`
+  (Gate 12). The workspace tests, clippy and rustfmt also pass on macOS; a theme test that assumed a dark taskbar
+  override now accepts macOS's always-light template icon.
 
 ## [0.1.0] - 2026-11-11
 

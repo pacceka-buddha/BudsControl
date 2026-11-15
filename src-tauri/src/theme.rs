@@ -92,7 +92,8 @@ mod tests {
             std::env::set_var("BUDS_TASKBAR_THEME", "light");
             assert!(taskbar_is_light());
             std::env::set_var("BUDS_TASKBAR_THEME", "DARK");
-            assert!(!taskbar_is_light());
+            // macOS ignores the override: its template icon is always drawn black and tinted by the OS.
+            assert_eq!(taskbar_is_light(), cfg!(target_os = "macos"));
             std::env::remove_var("BUDS_TASKBAR_THEME");
         }
     }

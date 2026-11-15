@@ -44,6 +44,10 @@ impl Candidate {
 
     /// How long to wait for this candidate before moving on.
     pub fn timeout(self) -> std::time::Duration {
+        // macOS: an open that hangs is dropped after 3 s (as the Swift app does); the retry connects fast.
+        if cfg!(target_os = "macos") {
+            return std::time::Duration::from_secs(3);
+        }
         match self {
             Candidate::Channel(_) => std::time::Duration::from_secs(3),
             _ => std::time::Duration::from_secs(5),
@@ -129,17 +133,19 @@ pub fn walk<T>(
     mut connect: impl FnMut(Candidate) -> Result<T, ConnectError>,
     mut log: impl FnMut(&str),
 ) -> Result<(Candidate, T), ConnectError> {
-    let mut tried: Vec<Candidate> = Vec::new();
+    // Candidates that failed, with the error. The hint is also in the standard list, so a repeat gets
+    // its earlier error back: a hinted 079A that timed out must end the walk, not be skipped.
+    let mut failed: Vec<(Candidate, ConnectError)> = Vec::new();
     let mut attempt =
         |candidate: Candidate, log: &mut dyn FnMut(&str)| -> Option<Result<T, ConnectError>> {
-            if tried.contains(&candidate) {
-                return None;
+            if let Some((_, error)) = failed.iter().find(|(c, _)| *c == candidate) {
+                return Some(Err(error.clone()));
             }
-            tried.push(candidate);
             log(&format!("trying {candidate}"));
             let result = connect(candidate);
             if let Err(error) = &result {
                 log(&format!("{candidate}: {error}"));
+                failed.push((candidate, error.clone()));
             }
             Some(result)
         };
@@ -316,6 +322,23 @@ mod tests {
                 .count(),
             1
         );
+    }
+
+    #[test]
+    fn a_hinted_service_that_times_out_ends_the_walk_instead_of_falling_to_the_serial_port() {
+        // macOS Buds 3: the hinted 079A times out, 1107 is missing, and the serial port opens but stays
+        // silent. The walk must stop at the timeout and leave the retry to the controller.
+        let (tried, result) = run(Some("heymelody"), |c| {
+            if c == Candidate::HeyMelody {
+                Err(ConnectError::timeout())
+            } else if c == Candidate::Spp {
+                Ok(())
+            } else {
+                Err(not_found())
+            }
+        });
+        assert_eq!(tried, [Candidate::HeyMelody]);
+        assert!(result.unwrap_err().timed_out);
     }
 
     #[test]

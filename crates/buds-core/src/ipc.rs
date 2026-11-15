@@ -72,18 +72,48 @@ fn socket_name(name: &str) -> io::Result<Name<'static>> {
 #[cfg(unix)]
 fn socket_path(name: &str) -> io::Result<std::path::PathBuf> {
     use std::os::unix::fs::DirBuilderExt;
-    let dir = match std::env::var_os("XDG_RUNTIME_DIR").filter(|d| !d.is_empty()) {
-        Some(dir) => std::path::PathBuf::from(dir),
-        None => {
-            let dir = std::env::temp_dir().join(format!("{}-private", default_name()));
-            std::fs::DirBuilder::new()
-                .mode(0o700)
-                .recursive(true)
-                .create(&dir)?;
-            dir
-        }
+    let private_dir = |dir: &std::path::Path| -> io::Result<()> {
+        std::fs::DirBuilder::new()
+            .mode(0o700)
+            .recursive(true)
+            .create(dir)
     };
-    Ok(dir.join(format!("{name}.sock")))
+    let file = format!("{name}.sock");
+    if let Some(dir) = std::env::var_os("XDG_RUNTIME_DIR").filter(|d| !d.is_empty()) {
+        let path = std::path::PathBuf::from(dir).join(&file);
+        if fits_sun_path(&path) {
+            return Ok(path);
+        }
+    }
+    let dir = std::env::temp_dir().join(format!("{}-private", default_name()));
+    let path = dir.join(&file);
+    if fits_sun_path(&path) {
+        private_dir(&dir)?;
+        return Ok(path);
+    }
+    // macOS: the temp folder alone is ~50 bytes and `sun_path` holds 104, so the names above do not fit.
+    // Short fixed-length names instead; the hash keeps one socket per name.
+    let dir = std::env::temp_dir().join(format!("bc-{}", short_id(name)));
+    private_dir(&dir)?;
+    Ok(dir.join("s.sock"))
+}
+
+/// Whether a socket path fits in `sockaddr_un.sun_path` (104 bytes on macOS and the BSDs, 108 on Linux,
+/// both including the terminating NUL).
+#[cfg(unix)]
+fn fits_sun_path(path: &std::path::Path) -> bool {
+    path.as_os_str().len() <= 100
+}
+
+/// 8 hex digits of the FNV-1a hash of `text`: stable across builds, so the app and `budsctl` agree.
+#[cfg(unix)]
+fn short_id(text: &str) -> String {
+    let mut hash: u32 = 0x811c_9dc5;
+    for byte in text.bytes() {
+        hash ^= u32::from(byte);
+        hash = hash.wrapping_mul(0x0100_0193);
+    }
+    format!("{hash:08x}")
 }
 
 #[cfg(unix)]
@@ -288,6 +318,20 @@ mod tests {
             name.chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_long_socket_name_still_gets_a_path_that_fits_sun_path() {
+        // On macOS "<temp>/<name>-private/<name>.sock" exceeds sun_path, so a short path is used.
+        let name = format!("budscontrol-{}", "x".repeat(80));
+        let path = socket_path(&name).unwrap();
+        assert!(path.as_os_str().len() <= 100, "{}", path.display());
+        assert_eq!(path, socket_path(&name).unwrap(), "must be stable");
+        let other = socket_path("budscontrol-other").unwrap();
+        assert_ne!(path, other);
+        let _ = std::fs::remove_dir(path.parent().unwrap());
+        let _ = std::fs::remove_dir(other.parent().unwrap());
     }
 
     #[test]
