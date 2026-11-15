@@ -36,7 +36,6 @@ fn main() {
         for size in SIZES {
             for (row, (_, level, connected)) in states.iter().enumerate() {
                 let y0 = row as u32 * row_h;
-                // Background cell.
                 for y in 0..row_h {
                     for x in 0..cell(size) {
                         put(&mut sheet, x0 + x, y0 + y, bg, 255);

@@ -3,7 +3,7 @@
 What the OnePlus / OPPO / realme earbuds speak on their control channel. Derived from the original
 [BudsControl](https://github.com/amarsakore/BudsControl) (`Sources/Protocol.swift`, `BudsController.swift`) and the
 protocol references credited in `THIRD_PARTY_NOTICES.md`. The Rust implementation is `crates/buds-core`
-(`protocol.rs`, `parse.rs`, `encode.rs`); tests are in `crates/buds-core/tests/gate1.rs`.
+(`protocol.rs`, `parse.rs`, `encode.rs`); tests are in `crates/buds-core/tests/protocol_and_catalog.rs`.
 
 ## Transport
 

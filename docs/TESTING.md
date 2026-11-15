@@ -105,11 +105,38 @@ not tested**). Buds: OnePlus Buds 4, product ID `065414`.
 | 11.14 | The Release checklist rows (1-8, 11, 14, 16-18) by number | **not mapped**: the features were exercised, but not against that numbered list |
 | 11.15 | AppImage and .deb installs, "Launch at login" | **not tested** (an autostart entry did get created during testing; it is not known whether by a click or by the test script) |
 
+Re-run 2026-11-16 (same laptop, GNOME on X11, Buds 4), built from the working tree with the macOS and `plan.rs` fixes:
+`fmt`, `clippy -D warnings` and the whole workspace test suite pass on Linux; `devices`, `sdp`, `status` (connected via
+channel 15 in 0.24 s), all modes and ANC levels including adaptive, EQ, low latency and a gesture change read back from
+the buds; `budsctl` hands over to the running app (7 ms) and `--direct` is refused ("busy"); reconnect through the app
+took 1.2 s; the flyout sits 12 px above the bottom panel; the idle app uses about 0.5 % CPU. Not repeated: find
+earbuds, shortcuts, tray menu clicks, buds into the case, Wayland.
+
 If the connection fails: send the log (`~/.local/share/BudsControl/BudsControl.log`) and `budsctl sdp`.
 
-## Gate 12: macOS (nobody has run this on a Mac yet: all items are PENDING)
+## Gate 12: macOS (first run 2026-11-16 on macOS 27.0.1, Apple silicon, OnePlus Buds 3 `063C14`; partly done)
 
 Needs a Mac (11+) with OnePlus / OPPO / realme buds. The original Swift app is the reference for how it should behave.
+
+Run over SSH (Tailscale) with someone at the Mac for the parts that need hands. Built on the Mac from source
+(`./scripts/package-macos.sh` fails at the .dmg step over SSH, which needs a GUI session; the `.app` it builds is fine
+and was used). **Over SSH macOS gives `budsctl` no Bluetooth permission**: Terminal.app has to run it once and be
+allowed. Used here: scripts opened in Terminal with `open -a Terminal x.command`, output written to a file.
+
+| # | Check | Result |
+|---|---|---|
+| 12.1 | `budsctl devices`, `sdp` | pass: Buds 3 `connected`, `buds: yes`; `sdp`: enco link channel 15, serial port channel 12 |
+| 12.2 | `budsctl status` (app closed) | pass: HeyMelody 079A, channel 15; L/R/case battery, mode, EQ, low latency, gestures read |
+| 12.3 | Modes and ANC levels (off, transparency, anc, smart, max, moderate, mild) | pass, read back from the buds, with the buds **in the ears**. Out of the ears they are rejected with `0E` (the same as Linux). `adaptive` is not offered by the Buds 3 |
+| 12.4 | EQ presets, low latency on/off | pass, read back from the buds |
+| 12.5 | Gestures: change two, read back, restore | pass |
+| 12.6 | Find earbuds from the app | pass (heard) |
+| 12.7 | `budsctl` with the app running (handover) | pass after a fix: the app's command socket path was longer than macOS's 104 bytes, so it was never created. `budsctl status` is answered by the app (0 s) and `--direct` collides with it, as on the other platforms |
+| 12.8 | `budsctl find=on` on its own (no app) | **no sound heard**, the command succeeded. Probably the buds stop when the link closes right after; **not confirmed** (re-run it through the running app to check) |
+| 12.9 | First connect speed | **open**: the first RFCOMM open in a fresh `budsctl` process often hangs for the 3 s timeout and the retry connects in about 0.2 s. A fast first open followed an app quit; holding the device object and a longer wait before exit did not help. Cause not found |
+| 12.10 | .dmg: Gatekeeper warning, Bluetooth prompt (steps 1 above) | **not tested** (the `.app` was launched with `open`, quarantine cleared) |
+| 12.11 | Menu bar icon, flyout and vibrancy, Spaces, full-screen apps, Settings, Developer tab, HUD, Cmd shortcuts (steps 2 and 4 below) | **not checked** |
+| 12.12 | Release checklist rows (1-8, 11-14, 16-18) by number | **not mapped**; Intel Mac **untested** |
 
 1. Open the .dmg build: Gatekeeper warning (ad hoc signature), then the Bluetooth permission prompt appears once.
 2. No Dock icon; a template icon in the menu bar that follows light/dark menu bars; click opens the flyout under it with
