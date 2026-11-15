@@ -291,6 +291,18 @@ impl FakePlatform {
         }
     }
 
+    /// The EQ preset changes on the buds themselves (stem gesture, phone app), and they announce it.
+    pub fn push_eq(&self, id: u8) {
+        let sink = {
+            let mut w = self.world();
+            w.buds.eq_id = id;
+            w.sink.clone()
+        };
+        if let Some(sink) = sink {
+            sink.data(Frame::new(cmd::EQ_PUSH, 0, vec![id]).encode());
+        }
+    }
+
     // --- Observation ---
 
     /// Every command received from the controller, in order.

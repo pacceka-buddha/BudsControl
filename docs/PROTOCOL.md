@@ -49,6 +49,7 @@ Worked example: battery request, seq 1: `AA 07 00 00 06 01 01 00 00`.
 | `0x010C` | noise mode | `01 01` | contains `01 01 <mask lo> [<mask hi>]`; lowest set bit is the active mode |
 | `0x0112` | paired devices (multipoint) | – | `<status> <count> (<addr, reversed 6 bytes> <reserved> <2 = connected> <1 = this host> <name len> <name>)*` |
 | `0x0205` | subscribe to pushes | `03 01 02 03` | – (first byte is the number of ids) |
+| `0x0504` | EQ preset pushed by the buds | – | `<id>` when the preset changes (stem gesture, phone app) |
 | `0x0204` | push from the buds | – | first byte = subscription type (below), rest laid out like the matching reply |
 | `0x0108` | read gestures | – | `<status> <count> (<side> <context> <gesture> <action>)*` |
 | `0x0401` | set gesture | `01 <side> 01 <gesture> <action>` | `<status>` |

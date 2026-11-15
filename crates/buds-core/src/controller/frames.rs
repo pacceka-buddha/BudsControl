@@ -80,8 +80,32 @@ impl<P: Platform> Controller<P> {
                 }
             }
             c if c == reply(cmd::EQ_QUERY) => {
-                if let Some(id) = parse::eq_selected(p) {
-                    self.eq_id = Some(id);
+                if let Some(reported) = parse::eq_selected(p) {
+                    match self.pending_eq {
+                        // The buds confirmed what we asked for.
+                        Some(pending) if pending == reported => {
+                            self.clear_pending_eq();
+                            self.eq_id = Some(reported);
+                        }
+                        // Stale reading while the DSP is switching: ignore it.
+                        Some(_) => {}
+                        None => self.eq_id = Some(reported),
+                    }
+                }
+            }
+            cmd::EQ_PUSH => {
+                if let Some(&id) = p.first() {
+                    self.info(&format!("EQ push: preset {id}"));
+                    match self.pending_eq {
+                        // A late push from an earlier selection is dropped.
+                        Some(pending) if pending == id => {
+                            self.clear_pending_eq();
+                            self.eq_id = Some(id);
+                        }
+                        Some(_) => {}
+                        // Changed from outside (stem gesture, phone app).
+                        None => self.eq_id = Some(id),
+                    }
                 }
             }
             c if c == reply(cmd::EQ_LIST_QUERY) => {
@@ -92,12 +116,21 @@ impl<P: Platform> Controller<P> {
                 }
             }
             c if c == reply(cmd::SET_EQ) || c == reply(cmd::SET_CUSTOM_EQ) => {
-                // Read back what the buds actually applied.
+                let custom = c == reply(cmd::SET_CUSTOM_EQ);
                 if p.first().is_some_and(|s| *s != 0) {
-                    self.info(&format!("EQ change rejected: {}", to_hex(p)));
+                    let kind = if custom { "custom " } else { "" };
+                    self.info(&format!("{kind}EQ change rejected: {}", to_hex(p)));
+                    // Nothing to wait for: read back what the buds actually have.
+                    self.clear_pending_eq();
+                    self.send(cmd::EQ_QUERY, vec![]);
+                    if custom {
+                        self.send(cmd::EQ_LIST_QUERY, encode::EQ_LIST_QUERY.to_vec());
+                    }
+                } else if self.pending_eq.is_some() || custom {
+                    // Accepted: check once more shortly, in case no push or confirmation follows.
+                    self.eq_reread_list = custom;
+                    self.schedule(TimerKind::EqRecheck, EQ_RECHECK_DELAY);
                 }
-                self.send(cmd::EQ_QUERY, vec![]);
-                self.send(cmd::EQ_LIST_QUERY, encode::EQ_LIST_QUERY.to_vec());
             }
             c if c == reply(cmd::GESTURE_QUERY) => {
                 if let Some(list) = parse::gestures(p) {

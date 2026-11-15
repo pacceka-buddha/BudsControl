@@ -7,6 +7,12 @@ All notable changes to this project are listed here. The format follows
 
 ### Fixed
 
+- Switching the EQ preset is steadier: a change waits for the buds to confirm it, stale readings while they switch are
+  ignored, and the app re-reads after 1.2 s if no confirmation comes. An EQ change made on the buds themselves (stem
+  gesture, phone app) now shows up at once (`0x0504` push). Both follow upstream 1.3.4.
+- When the control channel can't be opened, the app now waits longer between tries (6 s, 12 s, up to 5 min) after two
+  failures in a row, instead of retrying every 8 s forever. Asking to reconnect skips the wait. Follows upstream 1.3.5.
+- Windows: listing the paired devices gives up after 15 s, so a hung Bluetooth call can't leave the app stuck at start-up.
 - Linux: after the buds dropped, the app reconnected in a tight loop (about 25 open/close cycles in 300 ms) instead of
   waiting between attempts. A failed write now follows the normal retry timer.
 - Linux (X11): the flyout opened far from the panel and stayed at the wrong height after collapsing. It now sits

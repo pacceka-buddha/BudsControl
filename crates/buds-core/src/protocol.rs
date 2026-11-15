@@ -30,6 +30,8 @@ pub mod cmd {
     pub const EQ_LIST_QUERY: u16 = 0x0122;
     pub const SET_EQ: u16 = 0x0406;
     pub const SET_CUSTOM_EQ: u16 = 0x0418;
+    /// Pushed by the buds when the EQ preset changes (stem gesture, phone app). Not a reply.
+    pub const EQ_PUSH: u16 = 0x0504;
 }
 
 /// Set on a command number to form the matching reply (0x0106 -> 0x8106).

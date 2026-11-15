@@ -90,6 +90,10 @@ pub(crate) enum TimerKind {
     ApplyQueuedMode,
     FindStop,
     Resume,
+    /// An EQ change was not confirmed in time.
+    EqWatchdog,
+    /// Read the EQ back once after the buds acknowledged a change.
+    EqRecheck,
 }
 
 pub(crate) enum Msg {
@@ -219,6 +223,10 @@ pub struct Controller<P: Platform> {
     case_battery: Option<Battery>,
     game_mode: Option<bool>,
     eq_id: Option<u8>,
+    /// EQ preset we asked for and the buds haven't confirmed yet. While set, other readings are stale.
+    pending_eq: Option<u8>,
+    /// What the next EQ re-read should also fetch: the preset list (custom EQ changes).
+    eq_reread_list: bool,
     custom_eqs: Vec<CustomEq>,
     gestures: BTreeMap<EarSide, BTreeMap<Gesture, GestureAction>>,
     finding_buds: bool,
@@ -244,6 +252,12 @@ pub struct Controller<P: Platform> {
     parser: FrameParser,
     seq: u8,
     retry_count: usize,
+    /// Control-channel opens that failed in a row, and when the next one may start. The OS can keep
+    /// reporting buds as connected after they left, so every open would just page buds that aren't
+    /// there: after two failures wait 6 s, 12 s, ... up to 5 min until they really connect or a
+    /// reconnect is asked for.
+    failed_opens: u32,
+    next_open: Option<Instant>,
     last_received: Option<Instant>,
     reply_sent: Option<Instant>,
     page_in_flight: bool,
@@ -302,6 +316,8 @@ impl<P: Platform> Controller<P> {
             case_battery: None,
             game_mode: None,
             eq_id: None,
+            pending_eq: None,
+            eq_reread_list: false,
             custom_eqs: Vec::new(),
             gestures: BTreeMap::new(),
             finding_buds: false,
@@ -322,6 +338,8 @@ impl<P: Platform> Controller<P> {
             parser: FrameParser::new(),
             seq: 0,
             retry_count: 0,
+            failed_opens: 0,
+            next_open: None,
             last_received: None,
             reply_sent: None,
             page_in_flight: false,
@@ -460,6 +478,7 @@ impl<P: Platform> Controller<P> {
                 if self.link == LinkState::Connecting {
                     self.info("stuck connecting, starting over");
                     self.close_channel();
+                    self.open_failed();
                     self.retry_count = 0;
                     self.schedule_retry();
                 }
@@ -481,7 +500,22 @@ impl<P: Platform> Controller<P> {
                 if self.link == LinkState::Connected {
                     self.refresh();
                 } else {
-                    self.reconnect();
+                    self.restart();
+                }
+            }
+            TimerKind::EqWatchdog => {
+                // No confirmation: read back and take whatever the buds report.
+                self.pending_eq = None;
+                self.reread_eq();
+            }
+            TimerKind::EqRecheck => {
+                if self.link == LinkState::Connected {
+                    if self.pending_eq.is_some() {
+                        self.send(cmd::EQ_QUERY, vec![]);
+                    }
+                    if self.eq_reread_list {
+                        self.send(cmd::EQ_LIST_QUERY, encode::EQ_LIST_QUERY.to_vec());
+                    }
                 }
             }
         }
@@ -499,9 +533,17 @@ impl<P: Platform> Controller<P> {
         self.schedule(TimerKind::Health, HEALTH_INTERVAL);
     }
 
+    /// Asked for (or the link just broke): also skips any wait from earlier failed opens.
     pub(crate) fn reconnect(&mut self) {
+        self.failed_opens = 0;
+        self.restart();
+    }
+
+    /// One try straight away; if it fails, the wait from earlier failures carries on growing.
+    fn restart(&mut self) {
         self.close_channel();
         self.retry_count = 0;
+        self.next_open = None;
         self.connect();
     }
 
@@ -609,8 +651,33 @@ impl<P: Platform> Controller<P> {
         self.expect_reply();
     }
 
+    /// Waits for the buds to confirm preset `id`: a 0x0504 push or a matching read-back clears it;
+    /// otherwise it is re-read after [`EQ_CONFIRM_TIMEOUT`] and the buds' answer taken. Until then,
+    /// readings of another preset are stale (the DSP is still switching) and ignored.
+    fn expect_eq(&mut self, id: u8, list: bool) {
+        self.pending_eq = Some(id);
+        self.eq_reread_list = list;
+        self.cancel(TimerKind::EqRecheck);
+        self.schedule(TimerKind::EqWatchdog, EQ_CONFIRM_TIMEOUT);
+    }
+
+    fn reread_eq(&mut self) {
+        self.send(cmd::EQ_QUERY, vec![]);
+        if self.eq_reread_list {
+            self.send(cmd::EQ_LIST_QUERY, encode::EQ_LIST_QUERY.to_vec());
+        }
+    }
+
+    /// Drops any EQ change still waiting for confirmation.
+    pub(super) fn clear_pending_eq(&mut self) {
+        self.pending_eq = None;
+        self.cancel(TimerKind::EqWatchdog);
+        self.cancel(TimerKind::EqRecheck);
+    }
+
     fn set_eq(&mut self, id: u8) {
         self.eq_id = Some(id);
+        self.expect_eq(id, false);
         self.send(cmd::SET_EQ, encode::set_eq(id));
         self.expect_reply();
     }
@@ -631,6 +698,7 @@ impl<P: Platform> Controller<P> {
         encode::apply_gains(&mut eq, gains);
         let payload = encode::set_custom_eq(&eq);
         self.eq_id = Some(eq.id);
+        self.expect_eq(eq.id, true);
         self.custom_eqs[index] = eq;
         self.send(cmd::SET_CUSTOM_EQ, payload);
         self.expect_reply();

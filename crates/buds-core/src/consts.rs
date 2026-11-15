@@ -19,6 +19,16 @@ pub const HEALTH_INTERVAL: Duration = Duration::from_secs(2);
 pub const CONNECT_AFTER_DEVICE_UP: Duration = Duration::from_secs(3);
 /// A request with no reply for this long means the link is dead.
 pub const REPLY_WATCHDOG: Duration = Duration::from_secs(3);
+/// An EQ change the buds haven't confirmed after this long is re-read and the buds' answer taken.
+pub const EQ_CONFIRM_TIMEOUT: Duration = Duration::from_millis(1200);
+/// After the buds acknowledge an EQ change, read it back once after this long if still unconfirmed.
+pub const EQ_RECHECK_DELAY: Duration = Duration::from_millis(500);
+/// Control-channel opens that fail this many times in a row start backing off.
+pub const OPEN_BACKOFF_AFTER: u32 = 2;
+/// First back-off wait; it doubles with each further failure.
+pub const OPEN_BACKOFF_BASE: Duration = Duration::from_secs(3);
+/// Longest wait between opens while backing off.
+pub const OPEN_BACKOFF_MAX: Duration = Duration::from_secs(300);
 /// Wait for the product ID before sending a mode requested while disconnected.
 pub const APPLY_QUEUED_MODE_DELAY: Duration = Duration::from_millis(1500);
 /// The find-my-earbuds sound stops by itself after this long.

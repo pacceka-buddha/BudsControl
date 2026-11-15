@@ -85,7 +85,9 @@ impl<P: Platform> Controller<P> {
         if self.link_handle.is_some() || self.link == LinkState::Connecting {
             return;
         }
-        let Some(buds) = self.find_buds_in(&self.devices) else {
+        let backing_off = self.next_open.is_some_and(|t| Instant::now() < t);
+        let buds = self.find_buds_in(&self.devices).filter(|_| !backing_off);
+        let Some(buds) = buds else {
             self.set_link(LinkState::Searching);
             if let Some(name) = self.paired_buds(&self.devices).and_then(|d| d.name)
                 && name != self.device_name
@@ -153,9 +155,12 @@ impl<P: Platform> Controller<P> {
             Err(error) => {
                 self.info(&format!("could not open the control channel: {error}"));
                 self.set_link(LinkState::Searching);
+                self.open_failed();
                 self.schedule_retry();
             }
             Ok(link) => {
+                self.failed_opens = 0;
+                self.next_open = None;
                 self.channel_id = link.channel();
                 // Remembered only once the buds answer: a service that accepts the connection but
                 // stays silent is not the control channel.
@@ -215,6 +220,7 @@ impl<P: Platform> Controller<P> {
 
     pub(super) fn close_channel(&mut self) {
         self.cancel(TimerKind::ReplyWatchdog);
+        self.clear_pending_eq();
         if let Some(task) = self.open_task.take() {
             task.abort();
         }
@@ -231,6 +237,22 @@ impl<P: Platform> Controller<P> {
         if self.link != LinkState::Searching {
             self.set_link(LinkState::Searching);
         }
+    }
+
+    /// An open failed: after a couple in a row, wait longer between tries (see `failed_opens`).
+    pub(super) fn open_failed(&mut self) {
+        self.failed_opens += 1;
+        if self.failed_opens < OPEN_BACKOFF_AFTER {
+            return;
+        }
+        let steps = (self.failed_opens - 1).min(16);
+        let wait = (OPEN_BACKOFF_BASE * 2u32.pow(steps)).min(OPEN_BACKOFF_MAX);
+        self.next_open = Some(Instant::now() + wait);
+        self.info(&format!(
+            "control channel failed {} times in a row, next try in {} s",
+            self.failed_opens,
+            wait.as_secs()
+        ));
     }
 
     pub(super) fn set_link(&mut self, new: LinkState) {
@@ -263,6 +285,7 @@ impl<P: Platform> Controller<P> {
         self.case_battery = None;
         self.game_mode = None;
         self.eq_id = None;
+        self.clear_pending_eq();
         self.custom_eqs = Vec::new();
         self.gestures.clear();
         self.hosts = Vec::new();
@@ -373,6 +396,8 @@ impl<P: Platform> Controller<P> {
                         self.platform.host_label()
                     ));
                     self.retry_count = 0;
+                    self.failed_opens = 0;
+                    self.next_open = None;
                     // Give the buds a moment to finish setting up audio profiles before RFCOMM.
                     self.schedule(TimerKind::Retry, CONNECT_AFTER_DEVICE_UP);
                 }
@@ -408,6 +433,7 @@ impl<P: Platform> Controller<P> {
         // Safety net: buds are connected to this computer but we aren't talking to them. Wait for
         // the settling time first so this can't race the delayed connect above.
         if self.link == LinkState::Searching
+            && self.next_open.is_none_or(|t| now >= t)
             && let Some(buds) = self.find_buds_in(&self.devices)
             && self
                 .connected_since

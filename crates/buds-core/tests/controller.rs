@@ -401,9 +401,10 @@ async fn an_open_that_never_finishes_is_abandoned_after_the_budget() {
     assert_eq!(r.log_count("stuck connecting, starting over"), 1);
     assert!(r.fake.open_count() >= 2, "a new attempt followed");
 
-    // The attempt already hanging is only given up by its own watchdog; the next one succeeds.
+    // The attempt already hanging is only given up by its own watchdog (a second failure in a row,
+    // so the next try waits 6 s); the one after that succeeds.
     r.fake.hang_open(false);
-    secs(12.0).await;
+    secs(20.0).await;
     assert_eq!(r.snap().link, LinkState::Connected);
 }
 
@@ -749,4 +750,47 @@ async fn cli_watch_prints_host_lists() {
         out.contains("HOSTS Phone connected=true self=false | This PC connected=true self=true"),
         "{out}"
     );
+}
+
+#[tokio::test(start_paused = true)]
+async fn repeated_failed_opens_back_off_until_a_reconnect_is_asked_for() {
+    let r = rig();
+    r.fake.fail_open(Some("host is down"));
+    r.handle.start();
+    secs(120.0).await;
+    assert!(r.log_count("failed 2 times in a row") >= 1);
+    assert!(
+        r.fake.open_count() < 9,
+        "backing off, not retrying every 8 s: {} opens",
+        r.fake.open_count()
+    );
+    // Asking for a reconnect skips the wait.
+    r.fake.fail_open(None);
+    r.handle.reconnect();
+    secs(3.0).await;
+    assert_eq!(r.snap().link, LinkState::Connected);
+}
+
+#[tokio::test(start_paused = true)]
+async fn an_eq_change_made_on_the_buds_is_picked_up() {
+    let r = connected_rig().await;
+    r.fake.push_eq(2);
+    secs(0.5).await;
+    assert_eq!(r.snap().eq_id, Some(2));
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_stale_eq_push_does_not_undo_a_pending_change_then_the_buds_decide() {
+    let r = connected_rig().await;
+    // The buds don't answer: our request to switch to 2 stays unconfirmed.
+    r.fake.drop_replies(true);
+    r.handle.set_eq(2);
+    secs(0.2).await;
+    r.fake.push_eq(1); // a late push from an earlier selection
+    secs(0.3).await;
+    assert_eq!(r.snap().eq_id, Some(2), "stale push ignored while pending");
+    // After the confirmation timeout the buds are asked and their answer wins.
+    r.fake.drop_replies(false);
+    secs(1.5).await;
+    assert_eq!(r.snap().eq_id, Some(1));
 }
