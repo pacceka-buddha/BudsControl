@@ -17,7 +17,7 @@ Ubuntu 24.04.5 LTS (GNOME 46, Intel laptop), OnePlus Buds 4, X11 and Wayland ses
 | Ubuntu 24.04, GNOME on **X11**, stock top bar | Works. |
 | Ubuntu 24.04, GNOME on **X11**, stock top bar + Ubuntu Dock fixed on the left | Works. |
 | Ubuntu 24.04, GNOME on **Wayland** | Works with the limitations below. The tray menu, Settings window and shortcut hint were not looked at on Wayland. |
-| Other distributions, KDE, XFCE, Cinnamon, other tray hosts | Not tested. |
+| Other distributions, KDE, XFCE, Cinnamon, other tray hosts | **Untested** (no hardware); reports welcome. |
 
 Works on all tested setups: connecting over BlueZ (HeyMelody service 079A, RFCOMM channel 15), `budsctl devices`, `sdp`
 and `status`, noise modes and ANC levels, EQ presets, low latency, gestures, find earbuds, shortcuts (X11), the shortcut

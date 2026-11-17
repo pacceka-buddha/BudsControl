@@ -136,7 +136,7 @@ allowed. Used here: scripts opened in Terminal with `open -a Terminal x.command`
 | 12.9 | First connect speed | **open**: the first RFCOMM open in a fresh `budsctl` process often hangs for the 3 s timeout and the retry connects in about 0.2 s. A fast first open followed an app quit; holding the device object and a longer wait before exit did not help. Cause not found |
 | 12.10 | .dmg: Gatekeeper warning, Bluetooth prompt (steps 1 above) | **not tested** (the `.app` was launched with `open`, quarantine cleared) |
 | 12.11 | Menu bar icon, flyout and vibrancy, Spaces, full-screen apps, Settings, Developer tab, HUD, Cmd shortcuts (steps 2 and 4 below) | **not checked** |
-| 12.12 | Release checklist rows (1-8, 11-14, 16-18) by number | **not mapped**; Intel Mac **untested** |
+| 12.12 | Release checklist rows (1-8, 11-14, 16-18) by number | **not mapped**; Intel Mac **untested** (no hardware, will not be tested here) |
 
 1. Open the .dmg build: Gatekeeper warning (ad hoc signature), then the Bluetooth permission prompt appears once.
 2. No Dock icon; a template icon in the menu bar that follows light/dark menu bars; click opens the flyout under it with
