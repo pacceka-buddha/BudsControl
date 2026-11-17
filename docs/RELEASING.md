@@ -26,7 +26,7 @@ macOS .dmg files (arm64 and x64), and attaches them to a GitHub release with gen
 
 ## What a release should contain
 
-Six files, named `BudsControl-<version>-<platform>.<ext>`. Sizes for 0.1.0, to spot a broken build at a glance
+Six files, named `BudsControl-<version>-<platform>.<ext>`. Sizes for 1.0.0, to spot a broken build at a glance
 (a file far from these sizes means something was left out or bundled twice):
 
 | File | About |

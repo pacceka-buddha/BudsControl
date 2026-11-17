@@ -108,7 +108,7 @@ Note which candidate connected. `budsctl status` prints the packet log; the line
    `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` no longer has "Buds Control" afterwards.
 3. Real PC: the portable zip runs from any folder and `budsctl.exe` next to it works; run the whole checklist above on
    the release build; leave it idle for 5 minutes (Task Manager: about 0 % CPU).
-4. Tag `v0.1.0` and confirm the Release workflow attaches the setup exe and the portable zip.
+4. Tag `v1.0.0` and confirm the Release workflow attaches the setup exe and the portable zip.
 
 ## Gate 11: Linux (Ubuntu 24.04.5, GNOME 46; runs 2026-11-11, 2026-11-16 and 2026-11-18; partly done)
 

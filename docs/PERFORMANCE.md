@@ -1,8 +1,9 @@
 # Performance and size
 
-Measured figures for Buds Control 0.1.0: package sizes, memory, CPU, start-up and connection times, and how big the
+Measured figures for Buds Control 1.0.0: package sizes, memory, CPU, start-up and connection times, and how big the
 project is. Everything here was measured on 2026-11-18 with release builds, except where a date is given. The last code
-change in these builds is commit `be6412d`. If a number is missing, it was not measured.
+change in these builds is commit `be6412d`. The builds measured carried the version number 0.1.0; the 1.0.0 release changes only that number, so the
+figures apply to it. If a number is missing, it was not measured.
 
 ## Test machines
 
