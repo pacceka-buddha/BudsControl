@@ -115,13 +115,13 @@ earbuds, shortcuts, tray menu clicks, buds into the case, Wayland.
 
 If the connection fails: send the log (`~/.local/share/BudsControl/BudsControl.log`) and `budsctl sdp`.
 
-## Gate 12: macOS (first run 2026-11-16 on macOS 27.0.1, Apple silicon, OnePlus Buds 3 `063C14`; partly done)
+## Gate 12: macOS (runs 2026-11-16 and 2026-11-18 on macOS 27.0.1, Apple silicon, OnePlus Buds 3 `063C14`; partly done)
 
 Needs a Mac (11+) with OnePlus / OPPO / realme buds. The original Swift app is the reference for how it should behave.
 
 Run over SSH (Tailscale) with someone at the Mac for the parts that need hands. Built on the Mac from source
-(`./scripts/package-macos.sh` fails at the .dmg step over SSH, which needs a GUI session; the `.app` it builds is fine
-and was used). **Over SSH macOS gives `budsctl` no Bluetooth permission**: Terminal.app has to run it once and be
+(`./scripts/package-macos.sh` fails at the .dmg step over SSH, which needs a GUI session; started from a script opened in
+Terminal with `open -a Terminal` it builds the .dmg too, which is how the 2026-11-18 .dmg was made). **Over SSH macOS gives `budsctl` no Bluetooth permission**: Terminal.app has to run it once and be
 allowed. Used here: scripts opened in Terminal with `open -a Terminal x.command`, output written to a file.
 
 | # | Check | Result |
@@ -133,10 +133,12 @@ allowed. Used here: scripts opened in Terminal with `open -a Terminal x.command`
 | 12.5 | Gestures: change two, read back, restore | pass |
 | 12.6 | Find earbuds from the app | pass (heard) |
 | 12.7 | `budsctl` with the app running (handover) | pass after a fix: the app's command socket path was longer than macOS's 104 bytes, so it was never created. `budsctl status` is answered by the app (0 s) and `--direct` collides with it, as on the other platforms |
-| 12.8 | `budsctl find=on` on its own (no app) | **no sound heard**, the command succeeded. Probably the buds stop when the link closes right after; **not confirmed** (re-run it through the running app to check) |
-| 12.9 | First connect speed | **open**: the first RFCOMM open in a fresh `budsctl` process often hangs for the 3 s timeout and the retry connects in about 0.2 s. A fast first open followed an app quit; holding the device object and a longer wait before exit did not help. Cause not found |
-| 12.10 | .dmg: Gatekeeper warning, Bluetooth prompt (steps 1 above) | **not tested** (the `.app` was launched with `open`, quarantine cleared) |
-| 12.11 | Menu bar icon, flyout and vibrancy, Spaces, full-screen apps, Settings, Developer tab, HUD, Cmd shortcuts (steps 2 and 4 below) | **not checked** |
+| 12.8 | `budsctl find=on` on its own (no app) | **no sound heard**, the command succeeded. Probably the buds stop when the link closes right after; **not confirmed**. 2026-11-18, through the running app's Find earbuds button, buds out of the ears: **pass**, it plays and stops on click (so the silent `budsctl find=on` is most likely the link closing right after, not a protocol fault) |
+| 12.9 | First connect speed | **open**: the first RFCOMM open in a fresh `budsctl` process often hangs for the 3 s timeout and the retry connects in about 0.2 s. A fast first open followed an app quit; holding the device object and a longer wait before exit did not help. Cause not found. 2026-11-18: not seen in the app (connected in 0.12 s after a start, 0.3 s on the first connection); the `budsctl` case was not re-run |
+| 12.10 | .dmg: Gatekeeper warning, Bluetooth prompt (steps 1 above) | 2026-11-18: .dmg built on the Mac (`BudsControl-0.1.0-macos-arm64.dmg`, 3.3 MB), copied to Downloads with the quarantine flag set, opened: window with the app icon and an Applications shortcut, drag to Applications worked. First launch: Gatekeeper says "Buds Control" Not Opened, "Apple could not verify it is free of malware", with **Done** and **Move to Bin** only (no Open button). **Open Anyway** in System Settings > Privacy & Security then started it, and it connected to the Buds 3 with the full flyout. Whether a Bluetooth permission prompt appeared was **not reported** (the permission could not be reset over SSH, so it may have been granted already) |
+| 12.11 | Menu bar icon, flyout, Settings, Developer tab (step 2 below) | pass 2026-11-18: menu bar icon, flyout under it with modes, levels, EQ, low latency, find earbuds and gestures; Settings opens with the General, Shortcuts and Developer tabs; the Developer log fills with the traffic, including the buds' pushes and `0E` rejections while the buds are out of the ears |
+| 12.13 | Spaces, full-screen apps, shortcut popup (HUD), Cmd shortcuts (steps 2 and 4 below) | **not checked** |
+| 12.14 | Out of the case, then open the app right away (the connection-hint bug of 3.13) | pass 2026-11-18: the app tried HeyMelody 079A first and connected in 0.12 s, battery and state read at once, no serial port fallback |
 | 12.12 | Release checklist rows (1-8, 11-14, 16-18) by number | **not mapped**; Intel Mac **untested** (no hardware, will not be tested here) |
 
 1. Open the .dmg build: Gatekeeper warning (ad hoc signature), then the Bluetooth permission prompt appears once.

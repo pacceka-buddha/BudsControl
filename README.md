@@ -14,7 +14,7 @@ the equalizer and more. Buds Control is a cross-platform port of
 |---|---|
 | **Windows 10 / 11** (x64) | Tested on real hardware (OnePlus Buds 4) |
 | **Linux** (x64) | Tested once on real hardware (Ubuntu 24.04, GNOME, OnePlus Buds 4; X11 and Wayland). See [Linux notes](docs/LINUX.md) for the Wayland limitations and known issues; reports welcome |
-| **macOS 11+** (Apple silicon, Intel) | Tested once on real hardware (macOS 27, Apple silicon, OnePlus Buds 3): connection, modes, EQ, gestures and find earbuds work. The menu bar UI and the .dmg are not yet checked, and Intel Macs are **untested**; reports welcome. The [original app](https://github.com/amarsakore/BudsControl) is the long-tested choice on a Mac |
+| **macOS 11+** (Apple silicon, Intel) | Tested once on real hardware (macOS 27, Apple silicon, OnePlus Buds 3): connection, modes, EQ, gestures and find earbuds work. The menu bar flyout, Settings and the .dmg install were checked too, and Intel Macs are **untested**; reports welcome. The [original app](https://github.com/amarsakore/BudsControl) is the long-tested choice on a Mac |
 
 ## Contents
 
@@ -91,8 +91,10 @@ system's Bluetooth settings **before** starting Buds Control.
 
 - Download `BudsControl-<version>-macos-arm64.dmg` (Apple silicon) or `BudsControl-<version>-macos-x64.dmg` (Intel)
   and drag the app to *Applications*.
-- The app is signed ad hoc, not notarised. The first time, right-click the app and choose **Open** (or run
-  `xattr -dr com.apple.quarantine /Applications/BudsControl.app`).
+- The app is signed ad hoc, not notarised, so macOS says it could not verify it. Click **Done** (not Move to Bin), open
+  **System Settings > Privacy & Security**, scroll down and click **Open Anyway** next to Buds Control (on older macOS
+  versions, right-click the app and choose **Open**). Or run
+  `xattr -dr com.apple.quarantine "/Applications/Buds Control.app"` once.
 - macOS asks once for permission to use Bluetooth; allow it.
 
 ## Using it
