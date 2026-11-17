@@ -9,13 +9,19 @@ use crate::protocol::{feature, push, reply};
 impl<P: Platform> Controller<P> {
     pub(super) fn received(&mut self, bytes: &[u8]) {
         self.last_received = Some(Instant::now());
-        if let (Some(hint), Some(address)) = (self.pending_hint.take(), self.address.clone()) {
+        self.log.append(LogDirection::Received, &to_hex(bytes));
+        let frames = self.parser.feed(bytes);
+        // Remembered only once the buds send a well-formed frame. Any bytes at all are not enough:
+        // the serial port service on the Buds 4 accepts a connection and sends unreadable data, and
+        // remembering it would make every later start use it and never reach the control service.
+        if !frames.is_empty()
+            && let (Some(hint), Some(address)) = (self.pending_hint.take(), self.address.clone())
+        {
             self.settings.update(|s| {
                 s.connect_hints.insert(address, hint);
             });
         }
-        self.log.append(LogDirection::Received, &to_hex(bytes));
-        for frame in self.parser.feed(bytes) {
+        for frame in frames {
             self.handle_frame(frame);
         }
     }

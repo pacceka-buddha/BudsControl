@@ -491,6 +491,13 @@ impl<P: Platform> Controller<P> {
                 };
                 if self.link == LinkState::Connected && silent {
                     self.info("no reply from buds, reconnecting");
+                    // Whatever was remembered did not work this time; start the next walk fresh
+                    // instead of insisting on the same service forever.
+                    if let Some(address) = self.address.clone() {
+                        self.settings.update(|s| {
+                            s.connect_hints.remove(&address);
+                        });
+                    }
                     self.reconnect();
                 }
             }

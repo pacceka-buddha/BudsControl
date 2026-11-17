@@ -367,6 +367,32 @@ async fn a_link_that_opens_dead_is_retried_on_the_timer_not_in_a_loop() {
 }
 
 #[tokio::test(start_paused = true)]
+async fn a_remembered_service_that_goes_silent_is_forgotten_until_it_answers_again() {
+    let r = connected_rig().await;
+    let hint = |r: &Rig| {
+        r.settings
+            .get()
+            .connect_hints
+            .get("12:34:56:78:9A:BC")
+            .cloned()
+    };
+    assert_eq!(hint(&r).as_deref(), Some("channel 15"));
+
+    // The buds stop answering: the next walk must not insist on the remembered service.
+    r.fake.drop_replies(true);
+    r.handle.refresh();
+    secs(3.5).await;
+    assert_eq!(r.log_count("no reply from buds, reconnecting"), 1);
+    assert_eq!(hint(&r), None);
+
+    // A service that really answers is remembered again.
+    r.fake.drop_replies(false);
+    secs(10.0).await;
+    assert_eq!(r.snap().link, LinkState::Connected);
+    assert_eq!(hint(&r).as_deref(), Some("channel 15"));
+}
+
+#[tokio::test(start_paused = true)]
 async fn silent_buds_trigger_a_reconnect_after_3_seconds() {
     let r = connected_rig().await;
     r.fake.drop_replies(true);
