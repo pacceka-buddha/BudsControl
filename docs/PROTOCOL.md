@@ -18,6 +18,10 @@ Two service UUIDs are used by different generations:
 
 If no service record is found, channels 15, 12, 13 are tried in that order.
 
+The serial port service is not a safe default: on the Buds 4 it accepts a connection and then sends bytes that are not
+protocol frames (it begins `03 01 00 03 ...`, not `AA`). Only a well-formed frame proves that a channel is the control
+channel, so the app remembers the service that worked only after one has arrived.
+
 ## Frames
 
 ```

@@ -1,8 +1,8 @@
 # Linux notes
 
-What works, what doesn't, and what to know when running Buds Control on Linux. First run on real hardware: **2026-11-11**,
-Ubuntu 24.04.5 LTS (GNOME 46, Intel laptop), OnePlus Buds 4, X11 and Wayland sessions. Test results are in
-[TESTING.md](TESTING.md) (Gate 11).
+What works, what doesn't, and what to know when running Buds Control on Linux. Tested on one machine: Ubuntu 24.04.5 LTS
+(GNOME 46, Intel Core i5-1235U laptop) with OnePlus Buds 4, on 2026-11-11, 2026-11-16 and 2026-11-18, in X11 and Wayland
+sessions. The results are in [TESTING.md](TESTING.md) (Gate 11).
 
 <p align="center">
   <img src="screenshots/linux-flyout-expanded.jpg" alt="The flyout on Ubuntu 24.04 (GNOME), above the panel" width="240">
@@ -17,6 +17,7 @@ Ubuntu 24.04.5 LTS (GNOME 46, Intel laptop), OnePlus Buds 4, X11 and Wayland ses
 | Ubuntu 24.04, GNOME on **X11**, stock top bar | Works. |
 | Ubuntu 24.04, GNOME on **X11**, stock top bar + Ubuntu Dock fixed on the left | Works. |
 | Ubuntu 24.04, GNOME on **Wayland** | Works with the limitations below. The tray menu, Settings window and shortcut hint were not looked at on Wayland. |
+| `.deb` (installed with `apt`) and AppImage, GNOME on X11 | Both install or start and connect. The AppImage ran without installing any extra package. |
 | Other distributions, KDE, XFCE, Cinnamon, other tray hosts | **Untested** (no hardware); reports welcome. |
 
 Works on all tested setups: connecting over BlueZ (HeyMelody service 079A, RFCOMM channel 15), `budsctl devices`, `sdp`
@@ -71,10 +72,20 @@ Starting the app a second time opens the flyout on every session type, which mak
   pkg-config libssl-dev libxdo-dev`.
 - **Build the app with `npx tauri build --no-bundle`** (or `npm run tauri build`), not a plain `cargo build --release`.
   A plain Cargo build leaves out the embedded web UI, and every window shows "Could not connect to localhost".
-- On a fresh clone, `npm ci` can leave Rolldown without its native binding, because the lockfile was generated on
-  Windows (npm bug 4828), and `npm run build` fails with "Cannot find native binding". Workaround:
-  `npm i --no-save @rolldown/binding-linux-x64-gnu@<installed rolldown version>`. Regenerating the lockfile on Linux
-  would fix it for everyone.
+- `npm ci` can leave Rolldown without its native binding, and `npm run build` then fails with "Cannot find native
+  binding". Rolldown and Vite need Node 20.19 or newer, or 22.12 or newer; with an older Node (22.11.0 here) npm skips the
+  binding and prints only an `EBADENGINE` warning. Updating Node is the fix. A lockfile written on another OS can cause
+  the same symptom (npm bug 4828). Workaround: `npm i --no-save @rolldown/binding-linux-x64-gnu@<installed rolldown
+  version>`.
+- The AppImage step downloads `linuxdeploy` from GitHub and can fail with `timeout: global` on a slow connection. Download
+  `linuxdeploy-x86_64.AppImage` yourself into `~/.cache/tauri/`, make it executable, and run the build again.
+
+## Resource use
+
+Measured on the Ubuntu 24.04 laptop above, with the app idle in the tray: 207 MB of memory (proportional; 398 MB if
+shared libraries are counted in every process), spread over three processes, and under 1 s of CPU per minute. The
+`.deb` is 4.0 MiB (9.4 MB installed) and the AppImage 88 MiB. `budsctl` answers through the running app in about 8 ms,
+and opening the control channel took 0.24 s. More in [PERFORMANCE.md](PERFORMANCE.md).
 
 ## Things worth checking if you test on another setup
 

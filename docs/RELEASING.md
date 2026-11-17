@@ -24,6 +24,24 @@ macOS .dmg files (arm64 and x64), and attaches them to a GitHub release with gen
 6. Watch the **Release** workflow in the Actions tab. When it finishes, open the release, check the attached files,
    and edit the notes if needed.
 
+## What a release should contain
+
+Six files, named `BudsControl-<version>-<platform>.<ext>`. Sizes for 0.1.0, to spot a broken build at a glance
+(a file far from these sizes means something was left out or bundled twice):
+
+| File | About |
+|---|---|
+| `windows-x64-setup.exe` | 1.8 MiB |
+| `windows-x64-portable.zip` | 2.5 MiB, holds `BudsControl.exe` and `budsctl.exe` |
+| `linux-x64.AppImage` | 88 MiB |
+| `linux-x64.deb` | 4.0 MiB |
+| `macos-arm64.dmg` | 3.2 MiB |
+| `macos-x64.dmg` | not measured yet (Intel build) |
+
+Build the Windows package with `scripts/package-windows.ps1` (or `npm run tauri build -- --config
+src-tauri/tauri.bundle.conf.json`). A plain `tauri build` leaves `budsctl` out of the installer. The full list of
+figures is in [PERFORMANCE.md](PERFORMANCE.md).
+
 ## First release on a new repository
 
 - In the repository's **Settings > Actions > General**, make sure workflows are allowed and that

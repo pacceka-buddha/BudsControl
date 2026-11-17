@@ -1,12 +1,13 @@
 # Contributing to Buds Control
 
-Thanks for helping. There are three useful ways to contribute, roughly in order of how much they help right now.
+There are three ways to contribute. Hardware reports help the most right now.
 
 ## 1. Hardware reports
 
-The Windows build has been tested only with **OnePlus Buds 4**; the Linux build has been run once (Ubuntu 24.04 with
-GNOME, see [docs/LINUX.md](docs/LINUX.md)) and the macOS build has not been run on a real Mac at all. If you try Buds Control on another OS or with another model, please open a
-**Hardware report** issue and say what worked and what didn't. Useful details:
+What has been tried so far: Windows 10/11 with **OnePlus Buds 4**; Linux on Ubuntu 24.04 with GNOME (X11 and Wayland)
+and Buds 4, see [docs/LINUX.md](docs/LINUX.md); macOS 27 on one Apple silicon Mac with **OnePlus Buds 3**. Intel Macs,
+other Linux distributions and desktops, and every other earbud model are untested. If you try Buds Control on any of
+them, open a **Hardware report** issue and say what worked and what didn't. Useful details:
 
 - OS and version (and on Linux: distribution, desktop, X11 or Wayland).
 - Earbud model, and the output of `budsctl status`, `budsctl devices` and `budsctl sdp`.
@@ -23,8 +24,8 @@ details listed above.
 ## 3. Pull requests
 
 1. Fork the repository and create a branch from `main`.
-2. Set up the project as described in [Building from source](README.md#building-from-source). Most work can be done
-   without earbuds: `BUDS_FAKE=1 npm run tauri dev` runs the app against simulated buds.
+2. Set up the project as described in [Building from source](README.md#building-from-source) (Node 20.19+ or 22.12+).
+   Most work can be done without earbuds: `BUDS_FAKE=1 npm run tauri dev` runs the app against simulated buds.
 3. Keep the change focused, and add or update tests where it makes sense (`crates/buds-core/tests`,
    `src/lib/*.test.ts`).
 4. Run the checks before pushing:

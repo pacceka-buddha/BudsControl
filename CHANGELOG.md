@@ -7,6 +7,11 @@ All notable changes to this project are listed here. The format follows
 
 ### Fixed
 
+- After the buds came out of the case, the app could stay on "Connected" with no battery and no controls. The control
+  service sometimes timed out right after the buds reconnected, so the app fell back to the serial port service, which
+  accepts a connection but sends data the app cannot read. Because any received bytes counted as an answer, the serial
+  port was then remembered and used first on every later start. Now a connection method is remembered only after the
+  buds send a valid reply, and the remembered method is dropped when the buds stop answering.
 - Switching the EQ preset is steadier: a change waits for the buds to confirm it, stale readings while they switch are
   ignored, and the app re-reads after 1.2 s if no confirmation comes. An EQ change made on the buds themselves (stem
   gesture, phone app) now shows up at once (`0x0504` push). Both follow upstream 1.3.4.
@@ -31,10 +36,13 @@ All notable changes to this project are listed here. The format follows
 - Linux (Wayland): the app starts through Xwayland when it can, so the flyout can be placed. It opens at the right end
   of the panel instead of the top-left corner. Set `GDK_BACKEND=wayland` to run natively. See
   [docs/LINUX.md](docs/LINUX.md) for the Wayland limitations (no global shortcuts, flyout not under the icon).
-- Linux: first run on real hardware (Ubuntu 24.04, GNOME, OnePlus Buds 4); results are in `docs/TESTING.md` (Gate 11).
-- macOS: first run on real hardware (macOS 27, Apple silicon, OnePlus Buds 3); results are in `docs/TESTING.md`
-  (Gate 12). The workspace tests, clippy and rustfmt also pass on macOS; a theme test that assumed a dark taskbar
-  override now accepts macOS's always-light template icon.
+- macOS: a theme test that assumed a dark taskbar override now accepts macOS's always-light template icon, so the
+  workspace tests, clippy and rustfmt pass on macOS too.
+
+- Docs: Linux and macOS were run on real hardware (Ubuntu 24.04 with a OnePlus Buds 4, macOS 27 on Apple silicon with
+  a OnePlus Buds 3); the results are in [docs/TESTING.md](docs/TESTING.md).
+- Docs: new [docs/PERFORMANCE.md](docs/PERFORMANCE.md) with package sizes, memory, CPU, start-up and connection times.
+- Docs: the macOS install steps now use **Open Anyway** in Privacy & Security.
 
 ## [0.1.0] - 2026-11-11
 

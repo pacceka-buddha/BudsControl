@@ -1,10 +1,23 @@
-# Hardware testing
+# Hardware test log
 
-Real-hardware checks for Buds Control, run with **OnePlus Buds 4** (product ID `065414`).
-Automated tests (`cargo test --workspace`) cover everything that doesn't need the buds; this list covers the rest.
-Fill in the **Result** column (pass / fail / note) and the date; re-run at Gates 3, 5, 9 and 10.
+How Buds Control was checked on real earbuds, and what has not been checked yet. The automated tests
+(`cargo test --workspace`, `npm test`) cover everything that does not need earbuds; this log covers the rest.
 
-## Gate 3: `budsctl` against the real buds (Phase 3)
+Checks are grouped in numbered **gates**. Each row says what to do, what should happen and, once it has been run, the
+result with its date. An empty result means the row has not been run.
+
+| Gate | Covers | State |
+|---|---|---|
+| 3 | `budsctl` against the real buds, on Windows (OnePlus Buds 4) | Run 2026-11-10 and 2026-11-18, every row passes |
+| Full checklist | The whole app, on Windows | Results not recorded row by row |
+| 9 | Reconnecting from a phone-only connection, sleep and wake | Results not recorded |
+| 10 | The Windows release build | Results not recorded |
+| 11 | Linux (Ubuntu 24.04, GNOME, Buds 4) | Run 2026-11-11, 2026-11-16 and 2026-11-18, partly done |
+| 12 | macOS (macOS 27, Apple silicon, Buds 3) | Run 2026-11-16 and 2026-11-18, partly done |
+
+Intel Macs and Linux desktops other than GNOME are untested.
+
+## Gate 3: `budsctl` against the real buds
 
 Build once: `cargo build -p budsctl` -> `target\debug\budsctl.exe` (use the full path or add it to `PATH`).
 Pair the buds in **Windows Settings > Bluetooth & devices**, take them out of the case, and make sure they are
@@ -12,26 +25,26 @@ Pair the buds in **Windows Settings > Bluetooth & devices**, take them out of th
 
 | # | Command | Expected | Result |
 |---|---|---|---|
-| 3.1 | `budsctl devices` | the Buds 4 listed as `connected`, `buds: yes` |  pass 2026-11-10 (Buds 4 `connected`, `buds: yes`) |
-| 3.2 | `budsctl status` | `device:  OnePlus Buds 4 [065414] connected`, real L/R/case battery, current mode, EQ, low latency, gestures; exit code 0 |  pass 2026-11-10 (`[065414]`, L 100% R 100%, mode, EQ, gestures read; exit 0) |
-| 3.3 | `budsctl anc`, `budsctl transparency`, `budsctl off` | the mode audibly changes each time; `status` agrees |  pass 2026-11-10 (each command a fresh session, read back from the buds; the audible change was not checked); 2026-11-18 the owner switched all modes and levels from the app with the buds in the ears: pass, heard |
-| 3.4 | `budsctl smart`, `max`, `moderate`, `mild`, `adaptive` | each ANC level applies and reads back (`mode:    anc (<level>) [bit N]`) |  pass 2026-11-10 (each command a fresh session, read back from the buds): smart bit 7, max 4, moderate 5, mild 6, adaptive 11 |
-| 3.5 | `budsctl watch 30`, meanwhile take a bud out / put it back / use a gesture / long-press for a mode | pushes show up as `<- AA ... 04 02 ...` lines; `HOSTS` line lists the paired devices | pass 2026-11-18 (owner, through the app rather than `budsctl watch`: changing the mode from the buds updated the flyout by itself) |
-| 3.6 | `budsctl raw 0106` | a `-> AA 07 00 00 06 01 ..` line, then a `<- ..` line whose command bytes are `06 81` |  pass 2026-11-10 (reply `06 81`) |
-| 3.7 | `budsctl eq=1`, `budsctl eq=0` | EQ preset changes; `status` shows the preset name |  pass 2026-11-10 (each command a fresh session, read back from the buds): Vocal, Bass, Balanced |
-| 3.8 | `budsctl custom=0,2,4,2,0,-2` (needs a custom EQ on the buds) | band gains applied; `status` lists `62Hz:0 ...` |  pass 2026-11-10 (each command a fresh session, read back from the buds): Custom1 bands 0,2,4,2,0,-2 applied, then reset to 0 |
-| 3.9 | `budsctl lowlatency=on` then `off` | `status` shows `lowlat:  on` / `off` |  pass 2026-11-10 (each command a fresh session, read back from the buds) |
-| 3.10 | `budsctl find=on` (**loud: take the buds out of your ears first**), then `find=off` | sound plays and stops | pass 2026-11-18 (owner, through the app's Find earbuds button, buds out of the ears; not run through `budsctl find=on`) |
-| 3.11 | `budsctl gesture=left,doubleTap,next`, then a real double tap on the left bud | the tap now skips to the next track; set it back afterwards | pass 2026-11-18 (owner, gesture set to play/pause in the app Settings, a real double tap paused and resumed music, then restored) |
+| 3.1 | `budsctl devices` | the Buds 4 listed as `connected`, `buds: yes` | pass 2026-11-10 (Buds 4 `connected`, `buds: yes`) |
+| 3.2 | `budsctl status` | `device:  OnePlus Buds 4 [065414] connected`, real L/R/case battery, current mode, EQ, low latency, gestures; exit code 0 | pass 2026-11-10 (`[065414]`, L 100% R 100%, mode, EQ, gestures read; exit 0) |
+| 3.3 | `budsctl anc`, `budsctl transparency`, `budsctl off` | the mode audibly changes each time; `status` agrees | pass 2026-11-10 (each command a fresh session, read back from the buds; the audible change was not checked); 2026-11-18 the tester switched all modes and levels from the app with the buds in the ears: pass, heard |
+| 3.4 | `budsctl smart`, `max`, `moderate`, `mild`, `adaptive` | each ANC level applies and reads back (`mode:    anc (<level>) [bit N]`) | pass 2026-11-10 (each command a fresh session, read back from the buds): smart bit 7, max 4, moderate 5, mild 6, adaptive 11 |
+| 3.5 | `budsctl watch 30`, meanwhile take a bud out / put it back / use a gesture / long-press for a mode | pushes show up as `<- AA ... 04 02 ...` lines; `HOSTS` line lists the paired devices | pass 2026-11-18 (tester, through the app rather than `budsctl watch`: changing the mode from the buds updated the flyout by itself) |
+| 3.6 | `budsctl raw 0106` | a `-> AA 07 00 00 06 01 ..` line, then a `<- ..` line whose command bytes are `06 81` | pass 2026-11-10 (reply `06 81`) |
+| 3.7 | `budsctl eq=1`, `budsctl eq=0` | EQ preset changes; `status` shows the preset name | pass 2026-11-10 (each command a fresh session, read back from the buds): Vocal, Bass, Balanced |
+| 3.8 | `budsctl custom=0,2,4,2,0,-2` (needs a custom EQ on the buds) | band gains applied; `status` lists `62Hz:0 ...` | pass 2026-11-10 (each command a fresh session, read back from the buds): Custom1 bands 0,2,4,2,0,-2 applied, then reset to 0 |
+| 3.9 | `budsctl lowlatency=on` then `off` | `status` shows `lowlat:  on` / `off` | pass 2026-11-10 (each command a fresh session, read back from the buds) |
+| 3.10 | `budsctl find=on` (**loud: take the buds out of your ears first**), then `find=off` | sound plays and stops | pass 2026-11-18 (tester, through the app's Find earbuds button, buds out of the ears; not run through `budsctl find=on`) |
+| 3.11 | `budsctl gesture=left,doubleTap,next`, then a real double tap on the left bud | the tap now skips to the next track; set it back afterwards | pass 2026-11-18 (tester, gesture set to play/pause in the app Settings, a real double tap paused and resumed music, then restored) |
 | 3.12 | Put the buds in the case, run `budsctl status` | `searching`, exit code 1, no hang (about 8 s) | pass 2026-11-18 (buds in the case, app closed: paged the buds, retried after 1, 2, 3 and 5 s, printed `searching` with an empty state, exit 1; after taking the buds out the app showed "Connected" with no battery or controls: see 3.13) |
-| 3.13 | Buds out of the case, then open the app from the Start menu | battery and controls appear | pass 2026-11-18 after a fix. Before it, the app stayed "Connected" with empty battery and controls: right after the buds reconnect the control service can time out, the app fell back to the serial port service (which accepts the connection but sends unreadable data) and saved it as the connection hint because *any* bytes counted as an answer, so every later start used it and never reached 079A. Now a hint is saved only after a well-formed frame arrives, and a hint is dropped when the buds stop answering. Regression test `a_remembered_service_that_goes_silent_is_forgotten_until_it_answers_again`. Checked with a hint set to `spp` by hand (recovered in under 4 s) and by the owner's real case test (HeyMelody 079A tried first, connected in 1.8 s) |
+| 3.13 | Buds out of the case, then open the app from the Start menu | battery and controls appear | pass 2026-11-18 after a fix. Before it, the app stayed "Connected" with empty battery and controls: right after the buds reconnect the control service can time out, the app fell back to the serial port service (which accepts the connection but sends unreadable data) and saved it as the connection hint because *any* bytes counted as an answer, so every later start used it and never reached 079A. Now a hint is saved only after a well-formed frame arrives, and a hint is dropped when the buds stop answering. Regression test `a_remembered_service_that_goes_silent_is_forgotten_until_it_answers_again`. Checked with a hint set to `spp` by hand (recovered in under 4 s) and by the tester's real case test (HeyMelody 079A tried first, connected in 1.8 s) |
 
 **Note** which candidate connected. `budsctl status` prints the packet log; the lines to look
 for are `trying ...` and `connected via ... (channel N)`. Expected: HeyMelody service 079A or 1107, or channel 15.
 The same text is in `%LOCALAPPDATA%\BudsControl\BudsControl.log`. **If no candidate connects, stop and report**
 (include that log).
 
-## Full checklist (re-run at Gates 5, 9, 10)
+## Full checklist
 
 | # | Check | Result |
 |---|---|---|
@@ -56,12 +69,12 @@ The same text is in `%LOCALAPPDATA%\BudsControl\BudsControl.log`. **If no candid
 | 19 | Tray icon ring / dim / theme; tooltip | |
 | 20 | DPI 100 / 150 / 200 %, two monitors, taskbar at top / left: flyout and HUD placement | |
 
-## Gate 9: reconnect (owner, needs the buds in a real phone/PC situation)
+## Gate 9: reconnect (needs the buds in a real phone and computer situation)
 
 1. Connect the buds to your phone only (disconnect them from the PC in Windows). Open Buds Control: it should show
    "Connecting..." / "Searching..." and, within ~10 s, Connected (the audio reconnect asks the buds to join the PC).
-   Check the Developer tab log for `audio reconnect requested`. If it says `audio reconnect not used: ...`, send me
-   the line and `budsctl audio`.
+   Check the Developer tab log for `audio reconnect requested`. If it says `audio reconnect not used: ...`, put that
+   line and the output of `budsctl audio` in your report.
 2. Turn "Reconnect buds to this PC automatically" off in Settings and repeat: the app must NOT pull the buds over by itself; Retry in
    the flyout must.
 3. Sleep the PC for about a minute and wake it: the buds reconnect without clicking anything.
@@ -69,7 +82,7 @@ The same text is in `%LOCALAPPDATA%\BudsControl\BudsControl.log`. **If no candid
    `budsctl --direct status` (fails with "address in use" while the app is running: expected).
 5. `budsctl sdp` shows `HeyMelody 079A: ..., channel 15`; `budsctl audio` lists the render endpoint.
 
-## Gate 10: release build (owner)
+## Gate 10: release build
 
 1. `./scripts/package-windows.ps1`, or download the artifacts of a tagged release.
 2. Windows Sandbox (no Bluetooth): run the setup exe: it installs without an admin prompt, the app starts in the tray
@@ -152,5 +165,5 @@ allowed. Used here: scripts opened in Terminal with `open -a Terminal x.command`
 
 ## Without hardware
 
-`budsctl --fake <command>` (or `BUDS_FAKE=1` for the app, from Phase 4) runs against a simulated Buds 4, so
+`budsctl --fake <command>` (or `BUDS_FAKE=1` for the app) runs against a simulated Buds 4, so
 commands and UI can be tried anywhere.

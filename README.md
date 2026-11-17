@@ -2,8 +2,8 @@
 
 **Control OnePlus, OPPO and realme earbuds from your PC's tray, without the phone app.**
 
-Switch **Noise Cancellation**, **Transparency** and **Off** in one click, pick the ANC level, check the battery, change
-the equalizer and more. Buds Control is a cross-platform port of
+Switch between noise cancellation, transparency and off in one click, pick the ANC level, check the battery and change
+the equalizer. Buds Control is a cross-platform port of
 [amarsakore/BudsControl](https://github.com/amarsakore/BudsControl) (a macOS app), built with Rust, Tauri 2 and Svelte.
 
 <p align="center">
@@ -13,8 +13,20 @@ the equalizer and more. Buds Control is a cross-platform port of
 | Platform | Status |
 |---|---|
 | **Windows 10 / 11** (x64) | Tested on real hardware (OnePlus Buds 4) |
-| **Linux** (x64) | Tested once on real hardware (Ubuntu 24.04, GNOME, OnePlus Buds 4; X11 and Wayland). See [Linux notes](docs/LINUX.md) for the Wayland limitations and known issues; reports welcome |
+| **Linux** (x64) | Tested on real hardware (Ubuntu 24.04, GNOME on X11 and Wayland, OnePlus Buds 4), including the `.deb` and the AppImage. Other distributions and desktops are untested. See the [Linux notes](docs/LINUX.md) for the Wayland limitations and known issues; reports welcome |
 | **macOS 11+** (Apple silicon, Intel) | Tested once on real hardware (macOS 27, Apple silicon, OnePlus Buds 3): connection, modes, EQ, gestures and find earbuds work. The menu bar flyout, Settings and the .dmg install were checked too, and Intel Macs are **untested**; reports welcome. The [original app](https://github.com/amarsakore/BudsControl) is the long-tested choice on a Mac |
+
+## At a glance
+
+| | Windows | Linux | macOS |
+|---|---|---|---|
+| Download | 1.8 MiB installer, 2.5 MiB portable zip | 4.0 MiB `.deb`, 88 MiB AppImage | 3.2 MiB `.dmg` (Apple silicon) |
+| Memory while idle in the tray | 182 MB private (app and web view) | 207 MB proportional (app and web view) | not measured |
+| CPU while idle | 0.6 % of one core | under 1 s of CPU per minute | not measured |
+| Connecting to the buds | 0.13-0.17 s | 0.24-0.3 s | 0.12-0.29 s |
+
+Most of the memory is the system web view that draws the window; the Rust program itself is 32-64 MB. How these were
+measured, and more numbers: [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
 ## Contents
 
@@ -34,8 +46,8 @@ the equalizer and more. Buds Control is a cross-platform port of
   Adaptive) where the model has them.
 - **Battery** for the left bud, right bud and case, also shown as a ring on the **tray icon** (with a charging bolt),
   following the light/dark taskbar.
-- **Equalizer** presets and custom EQ, **low latency** mode, **find my earbuds**, **touch gestures**.
-- **Global shortcuts** (cycle / ANC / Transparency / Off) with a small on-screen popup.
+- **Equalizer** presets and custom EQ, **low latency** mode, **find my earbuds** and **touch gestures**.
+- **Global shortcuts** (cycle, ANC, Transparency, Off) with a small on-screen popup.
 - **Automatic reconnect** when the buds joined only your phone, optional **remembered settings**, **launch at
   login**.
 - **`budsctl`**, a command-line tool that controls the buds directly or through the running app.
@@ -75,7 +87,7 @@ system's Bluetooth settings **before** starting Buds Control.
 - Windows hides new tray icons behind the **^** arrow next to the clock. To keep Buds Control visible, drag its icon
   onto the taskbar, or turn it on under *Settings > Personalization > Taskbar > Other system tray icons*.
 
-### Linux (tested once on Ubuntu 24.04; see [docs/LINUX.md](docs/LINUX.md))
+### Linux (tested on Ubuntu 24.04; see [docs/LINUX.md](docs/LINUX.md))
 
 | File | What it is |
 |---|---|
@@ -132,8 +144,11 @@ the commands on simulated buds.
 
 - **"Not connected"**: make sure the buds are out of the case and connected to *this* computer (not only to your
   phone). Use **Reconnect** in the menu, or turn on *Reconnect buds to this PC automatically* in Settings.
-- **A mode change is ignored**: some models don't have every mode or level; the flyout shows only what the model
-  reports.
+- **"Connected" but no battery or controls**: the buds accept only one control connection. If your phone's earbud app
+  or another program is holding it, Buds Control can see the buds but gets no answers. Close the other app or turn off
+  the phone's Bluetooth; the app retries by itself (**Reconnect** skips the wait).
+- **A mode change is ignored**: the earbuds only accept a noise-mode change while they are in your ears. Some models
+  also lack certain modes or levels; the flyout shows only what the model reports.
 - **Shortcut shows "Used by another app"**: another program has registered that key combination; pick another.
 - **Collecting details for a bug report**: run `budsctl status` and `budsctl devices`, and attach the log file:
 
@@ -156,9 +171,9 @@ Details: [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
 ## Building from source
 
-Requirements: Rust (stable; MSVC toolchain and the Visual Studio C++ Build Tools on Windows) and Node 20+. On Linux
-also: `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev pkg-config patchelf libssl-dev
-libxdo-dev`.
+Requirements: Rust 1.90 or newer (the MSVC toolchain and the Visual Studio C++ Build Tools on Windows) and Node 20.19
+or newer, or 22.12 or newer. On Linux also: `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+libdbus-1-dev pkg-config patchelf libssl-dev libxdo-dev`.
 
 ```bash
 npm install
@@ -197,7 +212,7 @@ Pushing a `v*` tag builds all of them on GitHub Actions and attaches them to a r
 | `crates/icongen` | App icon generator |
 | `src-tauri` | The Tauri app: tray, windows, shortcuts, popup |
 | `src` | Svelte frontend (flyout, settings, popup) |
-| `docs` | Protocol notes, hardware checklist, Linux notes and the release guide |
+| `docs` | Protocol notes, hardware test log, Linux notes, performance figures and the release guide |
 
 ### Without the buds
 
