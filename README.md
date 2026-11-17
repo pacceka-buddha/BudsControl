@@ -14,7 +14,7 @@ the equalizer. Buds Control is a cross-platform port of
 |---|---|
 | **Windows 10 / 11** (x64) | Tested on real hardware (OnePlus Buds 4) |
 | **Linux** (x64) | Tested on real hardware (Ubuntu 24.04, GNOME on X11 and Wayland, OnePlus Buds 4), including the `.deb` and the AppImage. Other distributions and desktops are untested. See the [Linux notes](docs/LINUX.md) for the Wayland limitations and known issues; reports welcome |
-| **macOS 11+** (Apple silicon, Intel) | Tested once on real hardware (macOS 27, Apple silicon, OnePlus Buds 3): connection, modes, EQ, gestures and find earbuds work. The menu bar flyout, Settings and the .dmg install were checked too, and Intel Macs are **untested**; reports welcome. The [original app](https://github.com/amarsakore/BudsControl) is the long-tested choice on a Mac |
+| **macOS 11+** (Apple silicon, Intel) | Tested on one Mac (macOS 27, Apple silicon, OnePlus Buds 3), including the `.dmg` install. Intel Macs are **untested**; reports welcome. The [original app](https://github.com/amarsakore/BudsControl) is the long-tested choice on a Mac |
 
 ## At a glance
 
