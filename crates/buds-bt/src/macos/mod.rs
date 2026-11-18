@@ -32,8 +32,12 @@ use crate::plan::{self, Candidate, ConnectError};
 
 /// A connection attempt may spend up to two service lookups, the serial port and three channel guesses.
 const CONNECT_BUDGET: Duration = Duration::from_secs(20);
-/// How long a page (`openConnection`) may take before we stop waiting for its answer.
-const PAGE_WAIT: Duration = Duration::from_secs(10);
+/// How long a page (`openConnection`) may take before we stop waiting for its answer. The page timeout
+/// below asks for 5 s, but on a OnePlus Buds 4 out of range the answer arrives about 15.4 s after the call.
+const PAGE_WAIT: Duration = Duration::from_secs(20);
+/// How long a page delegate is kept after we stopped waiting, so a late answer never reaches a freed
+/// object (IOBluetooth does not retain the target of `openConnection`).
+const PAGE_LATE_ANSWER: Duration = Duration::from_secs(30);
 /// 8000 x 0.625 ms = 5 s, like the original.
 const PAGE_TIMEOUT_UNITS: u32 = 8000;
 /// `kIOReturnSuccess`.
@@ -417,7 +421,15 @@ impl Platform for MacPlatform {
                 }
             })?;
             let answer = rx.recv_timeout(PAGE_WAIT);
-            drop(started);
+            if answer.is_ok() {
+                drop(started);
+            } else {
+                // IOBluetooth may still call the delegate: keep it alive a while longer.
+                std::thread::spawn(move || {
+                    std::thread::sleep(PAGE_LATE_ANSWER);
+                    drop(started);
+                });
+            }
             match answer {
                 Ok(IO_OK) => Ok(()),
                 Ok(status) => Err(format!("the buds are not reachable ({})", io_error(status))),

@@ -675,6 +675,18 @@ impl<P: Platform> Controller<P> {
         }
     }
 
+    /// The buds confirmed preset `id` (a push or a matching read-back). After a custom EQ edit the
+    /// recheck stays scheduled: the push arrives a few ms after the acknowledgement, and the custom EQ
+    /// list still has to be read back.
+    pub(super) fn confirm_eq(&mut self, id: u8) {
+        self.pending_eq = None;
+        self.cancel(TimerKind::EqWatchdog);
+        if !self.eq_reread_list {
+            self.cancel(TimerKind::EqRecheck);
+        }
+        self.eq_id = Some(id);
+    }
+
     /// Drops any EQ change still waiting for confirmation.
     pub(super) fn clear_pending_eq(&mut self) {
         self.pending_eq = None;

@@ -89,10 +89,7 @@ impl<P: Platform> Controller<P> {
                 if let Some(reported) = parse::eq_selected(p) {
                     match self.pending_eq {
                         // The buds confirmed what we asked for.
-                        Some(pending) if pending == reported => {
-                            self.clear_pending_eq();
-                            self.eq_id = Some(reported);
-                        }
+                        Some(pending) if pending == reported => self.confirm_eq(reported),
                         // Stale reading while the DSP is switching: ignore it.
                         Some(_) => {}
                         None => self.eq_id = Some(reported),
@@ -104,10 +101,7 @@ impl<P: Platform> Controller<P> {
                     self.info(&format!("EQ push: preset {id}"));
                     match self.pending_eq {
                         // A late push from an earlier selection is dropped.
-                        Some(pending) if pending == id => {
-                            self.clear_pending_eq();
-                            self.eq_id = Some(id);
-                        }
+                        Some(pending) if pending == id => self.confirm_eq(id),
                         Some(_) => {}
                         // Changed from outside (stem gesture, phone app).
                         None => self.eq_id = Some(id),

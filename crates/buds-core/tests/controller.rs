@@ -250,6 +250,24 @@ async fn mode_chosen_while_disconnected_is_sent_after_the_product_id() {
 // ---------------------------------------------------------------- other controls
 
 #[tokio::test(start_paused = true)]
+async fn custom_eq_list_is_read_back_even_when_the_push_comes_first() {
+    let r = connected_rig().await;
+    r.handle.set_eq(3);
+    secs(1.5).await;
+    assert!(r.snap().active_custom_eq.is_some());
+
+    // Like the Buds 4: the acknowledgement, then a 0x0504 push a few ms later. The push confirms the
+    // change, but the custom EQ list must still be read back once.
+    r.fake.clear_sent();
+    r.handle.set_custom_eq(vec![1, 2, 3, 4, 5, 6]);
+    secs(0.01).await;
+    r.fake.push_eq(3);
+    secs(1.5).await;
+    assert_eq!(r.fake.count_sent(cmd::EQ_LIST_QUERY), 1);
+    assert_eq!(r.snap().eq_id, Some(3));
+}
+
+#[tokio::test(start_paused = true)]
 async fn low_latency_eq_custom_eq_and_gestures() {
     let r = connected_rig().await;
     assert_eq!(r.snap().low_latency, Some(false));

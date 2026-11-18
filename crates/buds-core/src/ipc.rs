@@ -71,12 +71,22 @@ fn socket_name(name: &str) -> io::Result<Name<'static>> {
 /// directory below the temp folder.
 #[cfg(unix)]
 fn socket_path(name: &str) -> io::Result<std::path::PathBuf> {
-    use std::os::unix::fs::DirBuilderExt;
+    use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+    // The temp folder is shared on Linux and the name is predictable, so the directory may already
+    // exist, made by another user. Only use it if it is a real directory we can make private: chmod
+    // fails unless we own it.
     let private_dir = |dir: &std::path::Path| -> io::Result<()> {
         std::fs::DirBuilder::new()
             .mode(0o700)
             .recursive(true)
-            .create(dir)
+            .create(dir)?;
+        if !std::fs::symlink_metadata(dir)?.is_dir() {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                format!("{} is not a directory", dir.display()),
+            ));
+        }
+        std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))
     };
     let file = format!("{name}.sock");
     if let Some(dir) = std::env::var_os("XDG_RUNTIME_DIR").filter(|d| !d.is_empty()) {
