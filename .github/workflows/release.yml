@@ -12,7 +12,7 @@ jobs:
     name: Release notes
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Extract this version from the changelog
         run: |
           version="${GITHUB_REF_NAME#v}"
@@ -27,7 +27,7 @@ jobs:
           base="https://github.com/${GITHUB_REPOSITORY}"
           sed -i -E "s#\]\(((docs/|README\.md)[^)]*)\)#](${base}/blob/${GITHUB_REF_NAME}/\1)#g" notes.md
       - name: Create the release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: Buds Control ${{ github.ref_name }}
           body_path: notes.md
@@ -37,10 +37,10 @@ jobs:
     name: Windows installer + portable zip
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -48,7 +48,7 @@ jobs:
         shell: pwsh
         run: ./scripts/package-windows.ps1
       - name: Publish to the release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             release/*-setup.exe
@@ -59,7 +59,7 @@ jobs:
     name: Linux AppImage + deb
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: System packages
         run: |
           sudo apt-get update
@@ -67,14 +67,14 @@ jobs:
             libdbus-1-dev pkg-config patchelf libssl-dev libxdo-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - name: Build
         run: ./scripts/package-linux.sh
       - name: Publish to the release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             release/*.AppImage
@@ -93,16 +93,16 @@ jobs:
           - os: macos-15-intel
             arch: x64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - name: Build
         run: ./scripts/package-macos.sh
       - name: Publish to the release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: release/*.dmg
