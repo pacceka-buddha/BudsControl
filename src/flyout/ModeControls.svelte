@@ -1,5 +1,6 @@
 <script lang="ts">
   // Off / Transparency / Noise Cancellation, plus the ANC strength levels when ANC is on.
+  import { blur } from 'svelte/transition'
   import { api } from '../lib/api'
   import Icon from '../lib/components/Icon.svelte'
   import Segmented from '../lib/components/Segmented.svelte'
@@ -27,13 +28,13 @@
   onselect={(id) => api.setMode(id as NoiseMode)}
 >
   {#snippet segment(item, on)}
-    <Icon name={item.id as NoiseMode} size={16} />
-    {#if on}<span class="text">{MODE_SHORT[item.id as NoiseMode]}</span>{/if}
+    <Icon name={item.id as NoiseMode} size={15} />
+    <span class="text" class:shown={on} aria-hidden={!on}>{MODE_SHORT[item.id as NoiseMode]}</span>
   {/snippet}
 </Segmented>
 
 {#if showLevels}
-  <div class="levels">
+  <div class="levels" transition:blur={{ duration: 260, amount: 5 }}>
     <Segmented
       label="Noise cancellation level"
       items={levels}
@@ -51,20 +52,28 @@
 {/if}
 
 <style>
+  /* Unselected modes are icon-only: the label grows in from nothing as its segment widens. */
   .text {
-    font-size: 12px;
+    max-width: 0;
+    opacity: 0;
+    transform: scale(0.6);
+    font-size: 11.5px;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition:
+      max-width 420ms var(--ease-spring),
+      opacity 250ms,
+      transform 420ms var(--ease-spring);
+  }
+  .text.shown {
+    max-width: 110px;
+    opacity: 1;
+    transform: none;
   }
   .level {
     font-size: 11px;
   }
   .levels {
-    animation: appear var(--dur) var(--ease-out);
-  }
-  @keyframes appear {
-    from {
-      opacity: 0;
-    }
+    margin-top: -2px;
   }
 </style>

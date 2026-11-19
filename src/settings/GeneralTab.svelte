@@ -55,7 +55,7 @@
 
 <div class="page">
   <section class="device">
-    <BatteryRing level={connected ? snapshot.budsBattery : null} charging={snapshot.left?.charging === true || snapshot.right?.charging === true} size={52} />
+    <BatteryRing left={connected ? snapshot.left : null} right={connected ? snapshot.right : null} size={52} />
     <div class="who">
       <div class="name">{snapshot.deviceName}</div>
       <div class="status">{status}{connected ? ` · ${subtitle(snapshot)}` : ''}</div>

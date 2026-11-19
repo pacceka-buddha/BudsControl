@@ -14,13 +14,15 @@ fn main() {
     let out = std::env::args()
         .nth(1)
         .unwrap_or_else(|| "tray-icons.png".into());
-    let states: [(&str, Option<u8>, bool); 6] = [
-        ("100%", Some(100), true),
-        ("75%", Some(75), true),
-        ("40%", Some(40), true),
-        ("15%", Some(15), true),
-        ("unknown", None, true),
-        ("disconnected", Some(80), false),
+    // (label, left, right, connected)
+    let states: [(&str, Option<u8>, Option<u8>, bool); 7] = [
+        ("100%", Some(100), Some(100), true),
+        ("75%", Some(75), Some(75), true),
+        ("L 80% R 40%", Some(80), Some(40), true),
+        ("15%", Some(15), Some(15), true),
+        ("left only", Some(60), None, true),
+        ("unknown", None, None, true),
+        ("disconnected", Some(80), Some(80), false),
     ];
 
     let cell = |size: u32| size * ZOOM + PAD * 2;
@@ -34,7 +36,7 @@ fn main() {
         let bg = if light { (243, 243, 243) } else { (32, 32, 32) };
         let mut x0 = half as u32 * col_w;
         for size in SIZES {
-            for (row, (_, level, connected)) in states.iter().enumerate() {
+            for (row, (_, left, right, connected)) in states.iter().enumerate() {
                 let y0 = row as u32 * row_h;
                 for y in 0..row_h {
                     for x in 0..cell(size) {
@@ -43,7 +45,8 @@ fn main() {
                 }
                 let img = render_tray_icon(TrayIconSpec {
                     size,
-                    level: *level,
+                    left: *left,
+                    right: *right,
                     connected: *connected,
                     light_taskbar: light,
                 });

@@ -44,8 +44,8 @@ measured, and more numbers: [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
 - One-click **noise control** (ANC, Transparency, Off) and the five **ANC levels** (Smart, Max, Moderate, Mild,
   Adaptive) where the model has them.
-- **Battery** for the left bud, right bud and case, also shown as a ring on the **tray icon** (with a charging bolt),
-  following the light/dark taskbar.
+- **Battery** for the left bud, right bud and case, also shown on the **tray icon** as a ring split in two (left half
+  for the left bud, right half for the right), following the light/dark taskbar.
 - **Equalizer** presets and custom EQ, **low latency** mode, **find my earbuds** and **touch gestures**.
 - **Global shortcuts** (cycle, ANC, Transparency, Off) with a small on-screen popup.
 - **Automatic reconnect** when the buds joined only your phone, optional **remembered settings**, **launch at

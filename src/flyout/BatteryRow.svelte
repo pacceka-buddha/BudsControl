@@ -26,7 +26,7 @@
       role="img"
       aria-label={item.battery ? `${item.name} ${item.battery.level} percent${item.battery.charging ? ', charging' : ''}` : `${item.name} battery unknown`}
     >
-      <span class="glyph"><EarbudsGlyph part={item.part} size={16} /></span>
+      <span class="glyph"><EarbudsGlyph part={item.part} size={14} /></span>
       {#if item.battery?.charging}<span class="bolt"><Icon name="bolt" size={11} /></span>{/if}
       <span class="level {tone}">{item.battery ? `${item.battery.level}%` : '—'}</span>
     </div>
@@ -53,7 +53,7 @@
     display: grid;
   }
   .level {
-    font-size: 12px;
+    font-size: 11.5px;
     font-variant-numeric: tabular-nums;
   }
   .level.low {

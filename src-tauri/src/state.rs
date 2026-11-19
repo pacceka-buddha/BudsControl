@@ -21,6 +21,12 @@ pub struct FlyoutState {
     pub hidden_by_blur_at: Option<Instant>,
     /// A native menu opened from the flyout is showing; losing focus to it must not hide the flyout.
     pub menu_open: bool,
+    /// Counts shows and hides; a show waiting for the page to draw its snapshot goes ahead only if
+    /// nothing has happened since. `revealed` is the last show that went ahead.
+    pub generation: u64,
+    pub revealed: u64,
+    /// Windows: the latest snapshot behind the flyout, RGBA (see `backdrop.rs`).
+    pub backdrop: Vec<u8>,
 }
 
 impl Default for FlyoutState {
@@ -32,6 +38,9 @@ impl Default for FlyoutState {
             height: crate::app_windows::INITIAL_HEIGHT,
             hidden_by_blur_at: None,
             menu_open: false,
+            generation: 0,
+            revealed: 0,
+            backdrop: Vec::new(),
         }
     }
 }

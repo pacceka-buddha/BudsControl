@@ -57,7 +57,47 @@
   }
 }
 
-/* Linux: no Acrylic behind the page, so the surface is solid (and the borderless window gets an edge). */
+/* The flyout (`<html class="glass">`): a lighter, more see-through surface over the frosted backdrop,
+   soft cards, and a frosted selection pill instead of the accent colour, after the original macOS app. */
+:root.glass {
+  --surface: rgba(246, 246, 249, 0.5);
+  --text-2: rgba(0, 0, 0, 0.56);
+  --fill: rgba(255, 255, 255, 0.55);
+  --fill-hover: rgba(0, 0, 0, 0.05);
+  --card: rgba(255, 255, 255, 0.38);
+  --track: rgba(0, 0, 0, 0.06);
+  --sel: rgba(255, 255, 255, 0.92);
+  --sel-hi: rgba(255, 255, 255, 0.9);
+  --hi: rgba(255, 255, 255, 0.6);
+  --radius-card: 12px;
+  --ease-spring: cubic-bezier(0.34, 1.28, 0.64, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root.glass {
+    --surface: rgba(28, 28, 32, 0.48);
+    --text-2: rgba(255, 255, 255, 0.62);
+    --fill: rgba(255, 255, 255, 0.08);
+    --fill-hover: rgba(255, 255, 255, 0.06);
+    --card: rgba(255, 255, 255, 0.06);
+    --track: rgba(255, 255, 255, 0.07);
+    --sel: rgba(255, 255, 255, 0.17);
+    --sel-hi: rgba(255, 255, 255, 0.32);
+    --hi: rgba(255, 255, 255, 0.12);
+  }
+}
+
+/* Windows: the snapshot layer (Flyout.svelte) carries the surface; if there is no snapshot, the
+   surface is solid rather than see-through to an unblurred desktop. */
+:root.backdrop {
+  background: transparent;
+}
+
+:root.solid {
+  --surface: var(--surface-solid);
+}
+
+/* Linux: no frosted backdrop behind the page, so the surface is solid (and the borderless window gets an edge). */
 :root[data-platform='linux'] {
   --surface: var(--surface-solid);
 }

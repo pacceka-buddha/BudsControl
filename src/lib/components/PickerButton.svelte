@@ -1,5 +1,5 @@
 <script lang="ts">
-  // "Label ........ [ current value v ]": opens a menu of choices.
+  // "Label ........ current value ⇕": a plain text menu that opens a list of choices.
   import { popupMenu } from '../menu'
   import Icon from './Icon.svelte'
 
@@ -40,7 +40,7 @@
   <span class="label">{label}</span>
   <button type="button" bind:this={button} {disabled} aria-haspopup="menu" aria-expanded={open} onclick={show}>
     <span class="value">{value}</span>
-    <Icon name="chevronDown" size={12} />
+    <Icon name="chevronUpDown" size={12} />
   </button>
 </div>
 
@@ -59,21 +59,22 @@
     align-items: center;
     gap: 4px;
     max-width: 150px;
-    padding: 3px 8px 3px 10px;
-    border: 1px solid var(--stroke);
-    border-radius: var(--radius-pill);
-    background: var(--fill);
+    margin-right: -4px;
+    padding: 3px 4px 3px 8px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
     color: var(--text-2);
     font-size: 12px;
     font-weight: 500;
-    transition: background-color 120ms;
+    transition:
+      background-color 120ms,
+      color 120ms;
   }
-  button:hover:not(:disabled) {
-    background: var(--fill-hover);
-  }
-  button:active:not(:disabled),
+  button:hover:not(:disabled),
   button[aria-expanded='true'] {
-    background: var(--fill-press);
+    background: var(--fill-hover);
+    color: var(--text);
   }
   button:disabled {
     opacity: 0.5;
