@@ -5,6 +5,26 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-19
+
+### Changed
+
+- New app icon: two earbuds inside a split battery ring on a graphite tile.
+- The tray icon's ring is split in two: the left half shows the left bud's battery and the right half the right
+  bud's, so you can see when one runs down faster.
+- Restyled flyout: frosted glass on Windows (a blurred copy of what is behind it, taken as it opens, so it looks
+  the same with transparency effects off and over Remote Desktop or AnyDesk), no accent-coloured window border,
+  borderless cards, a springy pill on the mode and preset
+  switches, smaller switches and capsule buttons, and plain-text menus for gestures. The flyout is 272 px wide. The
+  header and the Settings window show the same split battery ring as the tray icon.
+
+### Fixed
+
+- The equalizer chose between preset buttons and a menu from an estimate of the text width taken before the page had
+  measured it, and never checked again. It now decides from the real widths.
+- At display scales such as 125%, the flyout could come out a fraction of a pixel too short and show a scrollbar
+  (seen on the "not connected" panel). Its height is now rounded up.
+
 ## [1.0.0] - 2026-11-18
 
 First public release.
