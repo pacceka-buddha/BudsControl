@@ -18,7 +18,7 @@ body:
     id: version
     attributes:
       label: Buds Control version
-      placeholder: "1.0.0"
+      placeholder: "1.1.0"
     validations:
       required: true
   - type: dropdown
