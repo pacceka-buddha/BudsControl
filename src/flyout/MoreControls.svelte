@@ -25,11 +25,14 @@
 
   // --- Equalizer: buttons when every preset name fits on one row, otherwise a menu ---
   const FONT = '600 11px "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif'
-  const ROW_WIDTH = 250 // 300 window - 24 padding - 20 card - 6 track
-  let measure: CanvasRenderingContext2D | null = null
+  const ROW_WIDTH = 222 // 272 window - 24 padding - 20 card - 6 track
+  // State, so the choice is made again with real text widths once the canvas exists (before that,
+  // `width` only estimates).
+  let measure: CanvasRenderingContext2D | null = $state(null)
   onMount(() => {
-    measure = document.createElement('canvas').getContext('2d')
-    if (measure) measure.font = FONT
+    const context = document.createElement('canvas').getContext('2d')
+    if (context) context.font = FONT
+    measure = context
   })
   function width(text: string): number {
     return measure ? measure.measureText(text).width : text.length * 7
@@ -101,7 +104,7 @@
       <Row
         icon="find"
         title="Find earbuds"
-        subtitle={snapshot.findingBuds ? 'Playing a sound…' : 'Loud — take them out of your ears first'}
+        subtitle={snapshot.findingBuds ? 'Playing a sound…' : 'Loud. Take them out of your ears first.'}
       >
         {#snippet accessory()}
           <Button variant={snapshot.findingBuds ? 'danger' : 'default'} onclick={() => api.findBuds(!snapshot.findingBuds)}>
@@ -142,7 +145,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding-top: 10px;
+    /* As in the mockup: the cards stand a little apart from the battery row. */
+    padding-top: 20px;
   }
   .seg-text {
     font-size: 11px;

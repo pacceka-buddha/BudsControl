@@ -23,7 +23,8 @@ body {
 }
 
 /* The window is the flyout: no card inside a transparent window, so growing the window never shows
-   a differently coloured strip. The translucent surface sits over the window's Acrylic effect. */
+   a differently coloured strip. The translucent surface sits over the window effect (macOS) or the
+   snapshot of the desktop (Windows, see Flyout.svelte). */
 html {
   background: var(--surface);
 }

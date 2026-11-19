@@ -57,6 +57,12 @@ export const api = {
   getPlatform: () => invoke<PlatformInfo>('get_platform'),
   flyoutResize: (height: number) => invoke<void>('flyout_resize', { height }),
   flyoutHide: () => invoke<void>('flyout_hide'),
+  /** Windows: the snapshot behind the flyout as raw RGBA (see `flyout-backdrop`). */
+  flyoutBackdrop: () => invoke<ArrayBuffer>('flyout_backdrop'),
+  /** The colour of the window's one-pixel top strip on Windows 11, 0x00BBGGRR. */
+  flyoutEdge: (color: number) => invoke<void>('flyout_edge', { color }),
+  /** The snapshot of show `generation` is drawn: open the flyout. */
+  flyoutReveal: (generation: number) => invoke<void>('flyout_reveal', { generation }),
   /** Tell the flyout a native menu is open, so losing focus to it doesn't hide the flyout. */
   setMenuOpen: (open: boolean) => invoke<void>('set_menu_open', { open }),
   openSettings: () => invoke<void>('open_settings'),

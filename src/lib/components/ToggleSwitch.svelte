@@ -67,4 +67,33 @@
   .on:active:not(:disabled) .knob {
     transform: translateX(17px);
   }
+
+  /* The flyout: a smaller switch with a white knob on a soft track. */
+  :global(html.glass) button {
+    width: 32px;
+    height: 18px;
+    border: 0;
+    background: var(--track);
+    box-shadow: inset 0 0 0 0.5px rgba(127, 127, 127, 0.25);
+  }
+  :global(html.glass) button.on {
+    background: var(--accent);
+  }
+  :global(html.glass) .knob {
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    margin-top: -7px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+  :global(html.glass) button:active:not(:disabled) .knob {
+    width: 16px;
+  }
+  :global(html.glass) .on .knob {
+    transform: translateX(14px);
+  }
+  :global(html.glass) .on:active:not(:disabled) .knob {
+    transform: translateX(12px);
+  }
 </style>

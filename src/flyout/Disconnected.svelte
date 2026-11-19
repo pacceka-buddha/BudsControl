@@ -26,7 +26,7 @@
     gap: 8px;
     padding: 8px 10px;
     background: var(--card);
-    border: 1px solid var(--stroke);
+    box-shadow: inset 0 0.5px 0 var(--hi);
     border-radius: var(--radius-card);
   }
   .message {

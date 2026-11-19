@@ -1,5 +1,6 @@
-//! Renders the app icon (two earbuds inside a battery ring on a glassy blue squircle), after the
-//! original `tools/MakeIcon.swift`. Drawn from scratch; no third-party artwork.
+//! Renders the app icon: two upright earbuds inside a split battery ring (left half cyan, right half
+//! violet) on a graphite glass squircle. Same idea as the tray icon in `buds-art`. Drawn from
+//! scratch; no third-party artwork.
 //!
 //! Usage: `cargo run -p icongen -- app-icon.png [size]` (default 1024 px), then
 //! `npx tauri icon app-icon.png` generates the platform icons in `src-tauri/icons`.
@@ -75,29 +76,42 @@ fn ellipse(cx: f32, cy: f32, rx: f32, ry: f32) -> Path {
     PathBuilder::from_oval(rect).expect("ellipse")
 }
 
-/// One earbud for the left ear; `mirror` flips it for the right ear.
-fn earbud(pixmap: &mut Pixmap, center: (f32, f32), size: f32, mirror: bool) {
-    let head_r = size * 0.25;
-    let stem_w = size * 0.15;
-    let stem_h = size * 0.62;
-    let place = Transform::from_translate(center.0, center.1)
-        .pre_scale(if mirror { -1.0 } else { 1.0 }, 1.0)
-        .pre_rotate(-14.0);
+/// An arc from `from` to `to` degrees, clockwise from 12 o'clock.
+fn arc(cx: f32, cy: f32, radius: f32, from: f32, to: f32) -> Option<Path> {
+    let steps = ((to - from) / 1.5).ceil().max(2.0) as u32;
+    let mut b = PathBuilder::new();
+    for i in 0..=steps {
+        let angle = (from - 90.0 + (to - from) * i as f32 / steps as f32).to_radians();
+        let (x, y) = (cx + radius * angle.cos(), cy + radius * angle.sin());
+        if i == 0 {
+            b.move_to(x, y);
+        } else {
+            b.line_to(x, y);
+        }
+    }
+    b.finish()
+}
 
+/// One upright earbud: an oval head at (`x`, `y`) with a stem hanging straight down, and the
+/// silicone ear tip on the side facing the other bud (`inward` is +1 for the left bud, -1 for the
+/// right). `u` is the size of one unit of the tray glyph's 24-unit grid.
+fn earbud(pixmap: &mut Pixmap, x: f32, y: f32, u: f32, inward: f32) {
+    let (rx, ry) = (3.0 * u, 3.7 * u);
+    let stem_w = 2.6 * u;
+    let head = ellipse(x, y, rx, ry);
     let stem = rounded_rect(
-        head_r * 0.25 - stem_w / 2.0,
-        0.0,
+        x - stem_w / 2.0,
+        y,
         stem_w,
-        stem_h,
+        6.0 * u + stem_w / 2.0,
         stem_w / 2.0,
     );
-    let head = ellipse(0.0, 0.0, head_r, head_r * 0.95);
 
-    // Soft shadow: a few translucent offset copies.
+    // Soft shadow: a few translucent copies, growing and dropping a little.
     for step in 0..6 {
-        let spread = step as f32 * size * 0.008;
-        let paint = solid(rgba(0.0, 0.0, 0.0, 0.045));
-        let shadow = place.pre_translate(0.0, size * 0.03 + spread * 0.5);
+        let spread = step as f32 * u * 0.12;
+        let paint = solid(rgba(0.0, 0.0, 0.0, 0.06));
+        let shadow = Transform::from_translate(0.0, u * 0.5 + spread * 0.5);
         for path in [&stem, &head] {
             if let Some(grown) = path.clone().stroke(
                 &Stroke {
@@ -112,26 +126,26 @@ fn earbud(pixmap: &mut Pixmap, center: (f32, f32), size: f32, mirror: bool) {
         }
     }
 
-    // Body: white with a touch of blue towards the stem edge for volume.
+    // Body: white, shading to a cool grey on the outer side for volume.
     let body = gradient(
-        (-head_r, 0.0),
-        (head_r, 0.0),
+        (x + rx * inward, y),
+        (x - rx * inward, y),
         &[
             (0.0, rgba(1.0, 1.0, 1.0, 1.0)),
-            (1.0, rgba(0.84, 0.88, 0.97, 1.0)),
+            (1.0, rgba(0.80, 0.83, 0.90, 1.0)),
         ],
     );
     for path in [&stem, &head] {
-        pixmap.fill_path(path, &body, FillRule::Winding, place, None);
+        pixmap.fill_path(path, &body, FillRule::Winding, Transform::identity(), None);
     }
 
-    // Silicone ear tip on the inner side.
-    let tip = ellipse(head_r * 0.85, head_r * 0.1, head_r * 0.3, head_r * 0.38);
+    // Ear tip on the inner side.
+    let tip = ellipse(x + rx * 0.62 * inward, y + ry * 0.05, rx * 0.36, ry * 0.36);
     pixmap.fill_path(
         &tip,
-        &solid(rgba(0.80, 0.84, 0.93, 1.0)),
+        &solid(rgba(0.74, 0.78, 0.88, 1.0)),
         FillRule::Winding,
-        place,
+        Transform::identity(),
         None,
     );
 }
@@ -164,14 +178,14 @@ fn render(px: u32) -> Pixmap {
         );
     }
 
-    // Blue to indigo, top-left to bottom-right.
+    // Graphite, lighter at the top left.
     let fill = gradient(
-        (bx + bw * 0.25, by),
-        (bx + bw * 0.75, by + bw),
+        (bx + bw * 0.2, by),
+        (bx + bw * 0.8, by + bw),
         &[
-            (0.0, rgba(0.40, 0.70, 1.0, 1.0)),
-            (0.5, rgba(0.16, 0.36, 0.95, 1.0)),
-            (1.0, rgba(0.33, 0.18, 0.80, 1.0)),
+            (0.0, rgba(0.235, 0.255, 0.305, 1.0)),
+            (0.5, rgba(0.105, 0.115, 0.145, 1.0)),
+            (1.0, rgba(0.047, 0.055, 0.071, 1.0)),
         ],
     );
     pixmap.fill_path(
@@ -187,7 +201,7 @@ fn render(px: u32) -> Pixmap {
         (0.0, by),
         (0.0, by + bw / 2.0),
         &[
-            (0.0, rgba(1.0, 1.0, 1.0, 0.35)),
+            (0.0, rgba(1.0, 1.0, 1.0, 0.14)),
             (1.0, rgba(1.0, 1.0, 1.0, 0.0)),
         ],
     );
@@ -207,7 +221,7 @@ fn render(px: u32) -> Pixmap {
     );
     pixmap.stroke_path(
         &rim,
-        &solid(rgba(1.0, 1.0, 1.0, 0.45)),
+        &solid(rgba(1.0, 1.0, 1.0, 0.22)),
         &Stroke {
             width: (s * 0.006).max(1.0),
             ..Stroke::default()
@@ -216,50 +230,43 @@ fn render(px: u32) -> Pixmap {
         None,
     );
 
-    // Battery ring: a faint track and a three-quarter arc, like the tray icon.
-    let (cx, cy, radius) = (s / 2.0, s / 2.0, s * 0.285);
-    let ring_width = s * 0.035;
-    if let Some(track) = PathBuilder::from_circle(cx, cy, radius) {
-        pixmap.stroke_path(
-            &track,
-            &solid(rgba(1.0, 1.0, 1.0, 0.22)),
-            &Stroke {
-                width: ring_width,
-                ..Stroke::default()
-            },
-            Transform::identity(),
-            None,
-        );
-    }
-    let mut arc = PathBuilder::new();
-    // From 12 o'clock clockwise through 3 and 6 to 9 o'clock.
-    for i in 0..=135 {
-        let degrees = 90.0 - 270.0 * (i as f32 / 135.0);
-        let radians = degrees.to_radians();
-        let point = (cx + radius * radians.cos(), cy - radius * radians.sin());
-        if i == 0 {
-            arc.move_to(point.0, point.1);
-        } else {
-            arc.line_to(point.0, point.1);
+    // Split battery ring: the left half is the left bud (cyan, 80%), the right half the right bud
+    // (violet, 55%). Each half has a faint track and fills up from the bottom.
+    let (cx, cy, radius) = (s / 2.0, s / 2.0, s * 0.30);
+    let ring_width = s * 0.04;
+    let half_gap = ((s * 0.03 + ring_width) / 2.0 / radius).to_degrees();
+    let span = 180.0 - 2.0 * half_gap;
+    let stroke = Stroke {
+        width: ring_width,
+        line_cap: LineCap::Round,
+        ..Stroke::default()
+    };
+    let mut ring = |from: f32, to: f32, color: Color| {
+        if let Some(path) = arc(cx, cy, radius, from, to) {
+            pixmap.stroke_path(&path, &solid(color), &stroke, Transform::identity(), None);
         }
-    }
-    if let Some(arc) = arc.finish() {
-        pixmap.stroke_path(
-            &arc,
-            &solid(rgba(1.0, 1.0, 1.0, 0.95)),
-            &Stroke {
-                width: ring_width,
-                line_cap: LineCap::Round,
-                ..Stroke::default()
-            },
-            Transform::identity(),
-            None,
-        );
-    }
+    };
+    let track = rgba(1.0, 1.0, 1.0, 0.13);
+    let (right_start, left_start) = (half_gap, 180.0 + half_gap);
+    ring(right_start, right_start + span, track);
+    ring(left_start, left_start + span, track);
+    ring(
+        left_start,
+        left_start + span * 0.80,
+        rgba(0.36, 0.80, 1.0, 1.0),
+    );
+    let right_end = right_start + span;
+    ring(
+        right_end - span * 0.55,
+        right_end,
+        rgba(0.65, 0.55, 1.0, 1.0),
+    );
 
-    // Earbuds are drawn with the y axis pointing down: the stem hangs below the head.
-    earbud(&mut pixmap, (s * 0.385, s * 0.45), s * 0.3, false);
-    earbud(&mut pixmap, (s * 0.615, s * 0.45), s * 0.3, true);
+    // Earbuds on the tray glyph's grid, scaled up: heads at x = 7 and 17 of 24, y = 8.9.
+    let u = s * 0.0215;
+    let head_y = cy - 3.1 * u;
+    earbud(&mut pixmap, cx - 5.0 * u, head_y, u, 1.0);
+    earbud(&mut pixmap, cx + 5.0 * u, head_y, u, -1.0);
 
     pixmap
 }

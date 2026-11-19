@@ -39,8 +39,8 @@ It is small, works offline and sends nothing to the internet.
 
 - **Noise control**: ANC, Transparency and Off in one click, plus the five ANC levels (Smart, Max, Moderate, Mild,
   Adaptive) on models that have them.
-- **Battery** for the left bud, right bud and case, also drawn as a ring on the **tray icon** (with a charging bolt)
-  that follows the light or dark taskbar.
+- **Battery** for the left bud, right bud and case, also drawn on the **tray icon** as a ring split in two (left half
+  for the left bud, right half for the right, with a charging bolt) that follows the light or dark taskbar.
 - **Equalizer** presets and custom EQ, **low latency** mode, **find my earbuds** and **touch gestures**.
 - **Global shortcuts** (cycle, ANC, Transparency, Off) with a small on-screen popup.
 - **Automatic reconnect** when the buds joined only your phone, optional **remembered settings**, **launch at

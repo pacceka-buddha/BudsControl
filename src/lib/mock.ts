@@ -306,7 +306,7 @@ export function invoke(command: string, args: Record<string, unknown> = {}): Pro
     case 'hud_done':
       break
     case 'app_version':
-      return Promise.resolve('1.0.0')
+      return Promise.resolve('1.1.0')
     case 'send_raw': {
       const hex = (n: number, w: number) => n.toString(16).toUpperCase().padStart(w, '0')
       const entry = { timeMs: Date.now(), direction: 'sent' as const, text: `AA 07 00 00 ${hex((args.command as number) & 255, 2)} ${hex((args.command as number) >> 8, 2)} 01 00 00` }
@@ -323,6 +323,8 @@ export function invoke(command: string, args: Record<string, unknown> = {}): Pro
       return Promise.resolve(params.get('accent') ? `#${params.get('accent')}` : null)
     case 'is_fake':
       return Promise.resolve(true)
+    case 'flyout_backdrop':
+      return Promise.resolve(new ArrayBuffer(0))
     case 'flyout_resize':
       ;(window as unknown as { __flyoutHeight?: number }).__flyoutHeight = args.height as number
       break

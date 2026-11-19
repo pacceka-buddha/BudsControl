@@ -135,7 +135,8 @@ pub fn icon_spec(snapshot: &Snapshot, scale: f64, light_taskbar: bool) -> IconSp
         // Windows draws tray icons at 16 px at 100%, 20 at 125%, 24 at 150%, 32 at 200%: render at
         // exactly that size so nothing is resampled.
         size: (BASE_ICON_SIZE * scale).round().clamp(16.0, 64.0) as u32,
-        level: connected.then_some(snapshot.buds_battery).flatten(),
+        left: snapshot.left.filter(|_| connected).map(|b| b.level),
+        right: snapshot.right.filter(|_| connected).map(|b| b.level),
         connected,
         light_taskbar,
     }
@@ -240,12 +241,17 @@ mod tests {
 
     #[test]
     fn icon_follows_state_scale_and_taskbar() {
-        let mut s = connected();
-        s.buds_battery = Some(80);
+        let s = connected();
         let spec = icon_spec(&s, 1.0, false);
         assert_eq!(
-            (spec.size, spec.level, spec.connected, spec.light_taskbar),
-            (16, Some(80), true, false)
+            (
+                spec.size,
+                spec.left,
+                spec.right,
+                spec.connected,
+                spec.light_taskbar
+            ),
+            (16, Some(80), Some(82), true, false)
         );
         assert_eq!(icon_spec(&s, 1.25, true).size, 20);
         assert_eq!(icon_spec(&s, 1.5, true).size, 24);
@@ -256,7 +262,7 @@ mod tests {
         off.link = LinkState::Searching;
         let spec = icon_spec(&off, 1.0, false);
         assert!(!spec.connected);
-        assert_eq!(spec.level, None);
+        assert_eq!((spec.left, spec.right), (None, None));
         // Absurd scales stay in range.
         assert_eq!(icon_spec(&s, 0.5, false).size, 16);
         assert_eq!(icon_spec(&s, 10.0, false).size, 64);
