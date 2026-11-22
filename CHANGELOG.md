@@ -5,6 +5,22 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Linux: the flyout is a rounded sheet in soft slate (a pale one with a light theme) with rounded cards, drawn in a
+  transparent window, instead of a flat black rectangle. Only the corners need a compositor, which current desktops have.
+- macOS: a glassier flyout. The page adds only a faint tint over the system's blur, the cards are brighter at the top,
+  the selection pill is brighter, a lit rim runs round the window, and the corners are rounder (16 px).
+
+### Fixed
+
+- The selection pill of the mode switch (and the other segmented controls) could stay narrow and off to one side when
+  the selection changed while the flyout was hidden, for example a mode change made on the buds or with `budsctl`. The
+  pill now follows its segment until the layout has settled, and again whenever the flyout is shown.
+- On Linux and macOS the flyout could open with empty space below the last card (about 200 px). The web view kept a
+  stale height for the expanding "more controls" panel when its content shrank, and the window followed it. The panel
+  now animates to its measured height instead of using a `0fr` to `1fr` grid row.
+
 ## [1.1.0] - 2026-11-19
 
 ### Changed
