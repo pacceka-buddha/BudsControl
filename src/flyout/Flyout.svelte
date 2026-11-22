@@ -18,6 +18,8 @@
   let root: HTMLElement | undefined = $state()
   let canvas: HTMLCanvasElement | undefined = $state()
   let inner: HTMLElement | undefined = $state()
+  // The More panel's own height, which the collapsible animates to.
+  let moreHeight = $state(0)
 
   const snapshot = $derived(app.snapshot)
   const connected = $derived(snapshot?.link === 'connected')
@@ -168,6 +170,11 @@
   onMount(() => {
     void initStores()
     void applyAccent()
+    // Linux: the window is transparent and the page draws its own rounded sheet (see tokens.css).
+    void api
+      .getPlatform()
+      .then((info) => document.documentElement.classList.toggle('backdrop', info.os === 'linux'))
+      .catch(() => {})
     const unlisten = listen<null>('flyout-shown', () => void applyAccent())
     const unlistenBackdrop = listen<BackdropInfo>('flyout-backdrop', (info) => void drawBackdrop(info))
 
@@ -213,8 +220,14 @@
       <div class="stack">
         <BatteryRow {snapshot} />
         {#if snapshot.hasMoreControls}
-          <div class="collapsible" class:open={expanded} class:animate inert={!expanded}>
-            <div class="inner" bind:this={inner}>
+          <div
+            class="collapsible"
+            class:open={expanded}
+            class:animate
+            inert={!expanded}
+            style:height={expanded ? `${moreHeight}px` : '0px'}
+          >
+            <div class="inner" bind:this={inner} bind:offsetHeight={moreHeight}>
               <MoreControls {snapshot} settings={app.settings} />
             </div>
           </div>
@@ -236,8 +249,8 @@
     z-index: -1;
     overflow: hidden;
     pointer-events: none;
-    /* Windows 11's corner radius for small windows. */
-    border-radius: 8px;
+    /* Windows 11's corner radius for small windows (Linux sets its own). */
+    border-radius: var(--sheet-radius, 8px);
   }
   :global(:root.backdrop) .backdrop {
     display: block;
@@ -251,7 +264,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: var(--surface);
+    background: var(--sheet, var(--surface));
     border-radius: inherit;
     box-shadow:
       inset 0 1px 0 var(--hi),
@@ -263,23 +276,19 @@
     gap: var(--gap);
     padding: var(--pad);
   }
-  /* Opens and closes like a disclosure: the row grows from 0 to the content's height. */
+  /* Opens and closes like a disclosure: the height goes from 0 to the content's measured height. (Not a
+     0fr -> 1fr grid row: WebKit kept such a row at its old size when the content shrank, so the window
+     stayed taller than the flyout.) */
   .collapsible {
-    display: grid;
-    grid-template-rows: 0fr;
+    overflow: hidden;
     opacity: 0;
   }
   .collapsible.animate {
     transition:
-      grid-template-rows 420ms cubic-bezier(0.32, 1.12, 0.6, 1),
+      height 420ms cubic-bezier(0.32, 0.9, 0.4, 1),
       opacity 300ms var(--ease-out);
   }
   .collapsible.open {
-    grid-template-rows: 1fr;
     opacity: 1;
-  }
-  .inner {
-    min-height: 0;
-    overflow: hidden;
   }
 </style>

@@ -103,8 +103,9 @@ pub fn create_flyout(app: &AppHandle) -> tauri::Result<()> {
         .title("Buds Control")
         .inner_size(FLYOUT_WIDTH, INITIAL_HEIGHT)
         .decorations(false)
-        // Linux has no window effects and a transparent window needs a compositor: solid there.
-        .transparent(cfg!(not(target_os = "linux")))
+        // Linux has no window effects, so the page draws its own opaque, rounded sheet in the
+        // transparent window (only the corners need a compositor, which every current desktop has).
+        .transparent(true)
         .shadow(true)
         .always_on_top(true)
         .skip_taskbar(true)
@@ -121,7 +122,7 @@ pub fn create_flyout(app: &AppHandle) -> tauri::Result<()> {
         .effects(
             EffectsBuilder::new()
                 .effect(Effect::Popover)
-                .radius(10.0)
+                .radius(16.0)
                 .build(),
         )
         .visible_on_all_workspaces(true);

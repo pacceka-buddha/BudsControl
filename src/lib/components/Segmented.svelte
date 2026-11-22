@@ -74,6 +74,25 @@
   let frame = 0
   let until = 0
   let last = 0
+  // A spring flight is running (the pill is moving on its own, so the layout must not snap it).
+  let springing = false
+  // The loop that keeps the pill on its segment while the layout settles.
+  let followFrame = 0
+
+  /** Snaps the pill to its segment every frame for `ms`: the layout (a segment growing on a transition)
+   *  keeps moving after the selection changes, and a hidden window gets no frames until it is shown. */
+  function follow(ms: number) {
+    cancelAnimationFrame(followFrame)
+    const end = performance.now() + ms
+    const tick = () => {
+      if (!springing) snap()
+      followFrame = performance.now() < end ? requestAnimationFrame(tick) : 0
+    }
+    followFrame = requestAnimationFrame(tick)
+  }
+
+  const settleMs = () => (variant === 'expand' ? 600 : 80)
+
   function animate(now: number) {
     const t = target()
     if (t) {
@@ -87,7 +106,9 @@
     if (now < until) frame = requestAnimationFrame(animate)
     else {
       frame = 0
+      springing = false
       snap()
+      follow(settleMs())
     }
   }
 
@@ -107,30 +128,55 @@
       // First show, a list change or reduced motion: no flight, just follow the layout settling.
       cancelAnimationFrame(frame)
       frame = 0
+      springing = false
       snap()
-      const settle = performance.now() + (variant === 'expand' ? 450 : 60)
-      const follow = () => {
-        snap()
-        if (performance.now() < settle) frame = requestAnimationFrame(follow)
+      follow(settleMs())
+      return () => {
+        cancelAnimationFrame(followFrame)
+        followFrame = 0
       }
-      frame = requestAnimationFrame(follow)
-      return () => cancelAnimationFrame(frame)
     }
     restart(blob, 'bubble')
     restart(buttons[selectedIndex], 'swell')
     until = performance.now() + 800
     last = performance.now()
     cancelAnimationFrame(frame)
+    cancelAnimationFrame(followFrame)
+    springing = true
     frame = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(frame)
+    return () => {
+      cancelAnimationFrame(frame)
+      frame = 0
+      springing = false
+    }
   })
 
+  // A window that was hidden when the selection changed gets its frames, and its transitions, only
+  // once it is shown again: keep the pill on its segment while that catches up.
+  function shown() {
+    if (!document.hidden) follow(settleMs() + 400)
+  }
+  $effect(() => {
+    document.addEventListener('visibilitychange', shown)
+    window.addEventListener('focus', shown)
+    return () => {
+      document.removeEventListener('visibilitychange', shown)
+      window.removeEventListener('focus', shown)
+      cancelAnimationFrame(followFrame)
+    }
+  })
+
+  // The pill follows the layout whenever it settles on its own: the group resizing, or a segment
+  // changing width (the "expand" variant grows the selected one on a transition). A change made while
+  // the window was hidden gets no animation frames, so the pill is measured when the transition has
+  // only just started; it must be measured again as the segments reach their final widths.
   $effect(() => {
     if (!group) return
     const observer = new ResizeObserver(() => {
-      if (!frame) snap()
+      if (!springing) snap()
     })
     observer.observe(group)
+    for (const button of buttons) if (button) observer.observe(button)
     return () => observer.disconnect()
   })
 
