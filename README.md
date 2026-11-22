@@ -25,9 +25,10 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/flyout-windows-anc.jpg" alt="The flyout on Windows 11 with noise cancellation on" height="430">
-  <img src="docs/screenshots/flyout-windows-eq.jpg" alt="The flyout on Windows 11 with the custom equalizer open" height="430">
-  <img src="docs/screenshots/linux-flyout-expanded.jpg" alt="The flyout on Ubuntu 24.04 with GNOME" height="430">
+  <img src="docs/screenshots/flyout-windows-anc.jpg" alt="The flyout on Windows 11 with noise cancellation on" height="360">
+  <img src="docs/screenshots/flyout-windows-eq.jpg" alt="The flyout on Windows 11 with the custom equalizer open" height="360">
+  <img src="docs/screenshots/linux-flyout-expanded.jpg" alt="The flyout on Ubuntu 24.04 with GNOME" height="360">
+  <img src="docs/screenshots/mac-flyout-expanded.jpg" alt="The flyout on macOS" height="360">
 </p>
 
 Switch between noise cancellation, transparency and off in one click, pick the ANC level, check the battery and change
@@ -58,10 +59,6 @@ supports.
 | **Windows 10 / 11** (x64) | Tested | OnePlus Buds 4 |
 | **Linux** (x64) | Tested on Ubuntu 24.04; other distributions and desktops are **untested** | OnePlus Buds 4, GNOME on X11 and Wayland, `.deb` and AppImage |
 | **macOS 11+** (Apple silicon, Intel) | Tested on one Apple silicon Mac; Intel Macs are **untested** | OnePlus Buds 3 and Buds 4, macOS 27, `.dmg` install |
-
-<p align="center">
-  <img src="docs/screenshots/mac-flyout-expanded.jpg" alt="The flyout on macOS, as frosted glass under the menu bar" height="430">
-</p>
 
 Hardware reports from untested setups are welcome; see [Contributing](#contributing). Wayland limits are in
 [docs/LINUX.md](docs/LINUX.md). On a Mac, the [original app](https://github.com/amarsakore/BudsControl) is the
@@ -129,9 +126,8 @@ system's Bluetooth settings **before** starting Buds Control.
 | Menu (modes, Settings, Reconnect, Quit) | right-click the tray icon | click the tray icon | right-click or Control-click |
 | Shortcut popup | on-screen popup | desktop notification | on-screen popup |
 
-Starting the app a second time just opens the flyout (on Linux with X11, next to the mouse pointer and set against
-the panel). Shortcuts are set under **Settings > Shortcuts**. The earbuds only accept a noise-mode change while they
-are in your ears.
+Starting the app a second time just opens the flyout. Shortcuts are set under **Settings > Shortcuts**. The earbuds only
+accept a noise-mode change while they are in your ears.
 
 **Linux and Wayland.** Global shortcuts work on X11 only. On Wayland, bind keys to `budsctl cycle` (or `anc`,
 `transparency`, `off`) in your desktop's keyboard settings instead. The app also runs through Xwayland there so it can
