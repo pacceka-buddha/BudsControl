@@ -13,8 +13,8 @@ table.
 | Full checklist | The whole app, on Windows | Results not recorded row by row |
 | 9 | Reconnecting from a phone-only connection, sleep and wake | Results not recorded |
 | 10 | The Windows release build | Results not recorded |
-| 11 | Linux (Ubuntu 24.04, GNOME, Buds 4) | Run 2026-11-11, 2026-11-16 and 2026-11-18, partly done |
-| 12 | macOS (macOS 27, Apple silicon, Buds 3) | Run 2026-11-16 and 2026-11-18, partly done |
+| 11 | Linux (Ubuntu 24.04, GNOME, Buds 4) | Run 2026-11-11, 2026-11-16, 2026-11-18 and 2026-11-22, partly done |
+| 12 | macOS (macOS 27, Apple silicon, Buds 3 and Buds 4) | Run 2026-11-16, 2026-11-18 and 2026-11-22, partly done |
 
 Intel Macs and Linux desktops other than GNOME are untested.
 
@@ -110,7 +110,7 @@ Note which candidate connected. `budsctl status` prints the packet log; the line
    the release build; leave it idle for 5 minutes (Task Manager: about 0 % CPU).
 4. Tag `v1.0.0` and confirm the Release workflow attaches the setup exe and the portable zip.
 
-## Gate 11: Linux (Ubuntu 24.04.5, GNOME 46; runs 2026-11-11, 2026-11-16 and 2026-11-18; partly done)
+## Gate 11: Linux (Ubuntu 24.04.5, GNOME 46; runs 2026-11-11, 2026-11-16, 2026-11-18 and 2026-11-22; partly done)
 
 Needs a Linux machine with BlueZ and OnePlus / OPPO / realme buds, X11 and Wayland sessions if possible. Setup notes,
 known issues and the Wayland limitations are in [LINUX.md](LINUX.md).
@@ -137,6 +137,9 @@ the screen). The first runs used a binary built with `npx tauri build --no-bundl
 | 11.14 | The Release checklist rows (1-8, 11, 14, 16-18) by number | **not mapped**: the features were exercised, but not against that numbered list |
 | 11.15 | AppImage and .deb installs | pass 2026-11-18 (note below) |
 | 11.16 | "Launch at login" | **not tested** (an autostart entry did get created during testing; it is not known whether by a click or by the test script) |
+| 11.17 | 1.1.0 flyout: look, size on first open, selection pill after a change made while hidden | pass 2026-11-22 after two fixes (note below) |
+| 11.18 | 1.1.0 placement: stock top bar, Dash to Panel, second launch | pass 2026-11-22: 12 px below the top bar (y 44 under a 32 px bar), 12 px above the Dash to Panel bar; a second launch opens at the pointer |
+| 11.19 | 1.1.0 through the UI: tray menu modes and Reconnect, low latency, gesture tab, EQ menu, Settings tabs, shortcuts | pass 2026-11-22 |
 
 Notes:
 
@@ -156,6 +159,32 @@ Notes:
     (`npm install --no-save @rolldown/binding-linux-x64-gnu@1.2.18` worked around it), and the AppImage step timed out
     downloading `linuxdeploy` until the file was placed in `~/.cache/tauri` by hand.
 
+- **11.17 (2026-11-22, the `.deb` built from the working tree, GNOME on X11, Buds 4):** two bugs showed up on the new
+  flyout and are fixed.
+  - *Stuck pill.* After the mode changed while the flyout was hidden (`budsctl off`, then open the flyout), the pill of
+    the mode switch stayed narrow and off to one side in 4 of 6 tries. The pill was measured once, when the selected
+    segment had only started to grow, and not again. It now follows its segment until the layout settles, and again
+    when the flyout is shown. Afterwards 4 of 4 tries on the installed package (and 13 of 13 on the build folder's
+    binary) were right.
+  - *Window about 200 px too tall.* On the first open after every fresh start, the window was 717 px high with empty
+    space under the Gestures card (513 px is right). WebKit kept a stale height for the `0fr` to `1fr` grid row of the
+    "more controls" panel after its content shrank, and the window followed it (reading the page through the WebKit
+    inspector showed the row at 586 px around 382 px of content; forcing a layout fixed it). A `budsctl` call before the
+    first open hid it. The panel now animates to its measured height. Afterwards 3 of 3 fresh starts of the installed
+    package opened at 513 px, and collapse and expand give 131 and 513 px.
+  - The flyout is now a rounded sheet in a transparent window; it was checked by screenshots.
+- **11.18:** with Dash to Panel off, the flyout opened from the tray menu at x 1341, y 44. A second launch follows the
+  pointer: with the pointer at x 40, 1000 and 1700 the flyout was at x 12, 864 and 1564, always at y 44. So the position
+  is the pointer's, not a fixed corner (an earlier x 164 was the pointer at x 300).
+- **11.19:** from the tray menu, Noise Cancellation, Off and Transparency each changed the mode on the buds, and
+  Reconnect reconnected via HeyMelody 079A. In the flyout the low latency switch changed the buds' setting both ways, the
+  Left / Right gesture tab and the EQ preset menu opened, and the Settings tabs (General, Shortcuts, Developer) drew.
+  Ctrl+Alt+B / N / J / O were recorded in Settings and, pressed from another window, cycled the modes and set ANC,
+  Transparency and Off. `budsctl` (modes, ANC levels, EQ, low latency, gesture change and restore) read back from the
+  buds, was answered by the running app, and `--direct` was refused while the app ran.
+- Not repeated on 2026-11-22: find earbuds (loud, the buds were in the ears), buds into the case, Wayland, "Launch at
+  login".
+
 Re-run 2026-11-16 (same laptop, GNOME on X11, Buds 4), built from the working tree with the macOS and `plan.rs` fixes:
 `fmt`, `clippy -D warnings` and the whole workspace test suite pass on Linux; `devices`, `sdp`, `status` (connected via
 channel 15 in 0.24 s), all modes and ANC levels including adaptive, EQ, low latency and a gesture change read back from
@@ -166,7 +195,7 @@ earbuds, shortcuts, tray menu clicks, buds into the case, Wayland.
 If the connection fails, include the log (`~/.local/share/BudsControl/BudsControl.log`) and `budsctl sdp` in your
 report.
 
-## Gate 12: macOS (runs 2026-11-16 and 2026-11-18 on macOS 27.0.1, Apple silicon, OnePlus Buds 3 `063C14`; partly done)
+## Gate 12: macOS (runs 2026-11-16, 2026-11-18 and 2026-11-22 on macOS 27.0.1, Apple silicon, OnePlus Buds 3 `063C14` and Buds 4 `065414`; partly done)
 
 Needs a Mac (11+) with OnePlus / OPPO / realme buds. The original Swift app is the reference for how it should behave.
 
@@ -195,6 +224,8 @@ Two macOS details shape how this is run:
 | 12.12 | Release checklist rows (1-8, 11-14, 16-18) by number | **not mapped**; Intel Mac **untested** (no hardware, will not be tested here) |
 | 12.13 | Spaces, full-screen apps, shortcut popup (HUD), Cmd shortcuts | **not checked** |
 | 12.14 | Out of the case, then open the app right away (the connection-hint bug of 3.13) | pass 2026-11-18: HeyMelody 079A tried first, connected in 0.12 s, no serial port fallback |
+| 12.15 | 1.1.0 build (.dmg built on the Mac): `budsctl` modes, ANC levels, EQ, low latency, gestures | pass 2026-11-22 (Buds 4), read back from the buds; the running app answered in 0.11 s |
+| 12.16 | 1.1.0 flyout: new icon, glass look, selection pill after a change made while hidden | pass 2026-11-22 (note below); looked at by the owner and in screenshots |
 
 Notes:
 
@@ -217,6 +248,18 @@ Notes:
 - **12.11:** the menu bar icon, the flyout under it (modes, levels, EQ, low latency, find earbuds, gestures), the Settings
   window with its General, Shortcuts and Developer tabs, and the Developer log, which fills with the traffic, including
   the buds' pushes and the `0E` rejections while the buds are out of the ears.
+
+- **12.15, 12.16 (2026-11-22, macOS 27, MacBook Air, OnePlus Buds 4, the 1.1.0 .dmg built on the Mac):** the new
+  icon and the separate left and right battery showed. The first look at the new build showed the pill stuck, the same
+  bug as on Linux (11.17), and the owner wanted the glass to be glassier; the new build lightens the page's tint and
+  brightens the cards, adds a lit rim and rounds the corners to 16 px. After the fix the pill was right in 6 of 6 mode changes made while the flyout was
+  hidden, and the owner accepted the look. Not checked on the Mac this time: Settings, the menu-bar menu, shortcuts,
+  the shortcut popup, find earbuds.
+- **Screenshots over SSH:** `screencapture` fails with "could not create image from display" until Terminal is allowed
+  to record the screen. Run from `open -a Terminal x.command` (like `budsctl`), macOS asks once to let Terminal bypass
+  the private window picker, and the owner has to click **Allow** at the Mac. The flyout hides when it loses focus, so
+  minimise the Terminal windows first, then open it by starting the app binary a second time (`open` on a running
+  app does not open the flyout) and capture about two seconds later.
 
 What to check on a Mac, if you are testing one:
 

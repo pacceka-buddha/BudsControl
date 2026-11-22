@@ -4,6 +4,8 @@
 //! a flyout window and a settings window, and forwards the UI's commands to it.
 
 mod app_windows;
+#[cfg(windows)]
+mod backdrop;
 mod commands;
 mod hotkeys;
 mod hud;
@@ -145,6 +147,9 @@ pub fn run() {
             commands::get_accent_color,
             commands::get_platform,
             commands::flyout_resize,
+            commands::flyout_backdrop,
+            commands::flyout_reveal,
+            commands::flyout_edge,
             commands::flyout_hide,
             commands::set_menu_open,
             commands::open_settings,

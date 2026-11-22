@@ -1,12 +1,12 @@
 # Linux notes
 
 What works, what doesn't, and what to know when running Buds Control on Linux. Tested on one machine: Ubuntu 24.04.5 LTS
-(GNOME 46, Intel Core i5-1235U laptop) with OnePlus Buds 4, on 2026-11-11, 2026-11-16 and 2026-11-18, in X11 and Wayland
-sessions. The results are in [TESTING.md](TESTING.md) (Gate 11).
+(GNOME 46, Intel Core i5-1235U laptop) with OnePlus Buds 4, on 2026-11-11, 2026-11-16, 2026-11-18 and 2026-11-22, in X11
+and Wayland sessions. The results are in [TESTING.md](TESTING.md) (Gate 11).
 
 <p align="center">
-  <img src="screenshots/linux-flyout-expanded.jpg" alt="The flyout on Ubuntu 24.04 (GNOME), above the panel" width="240">
-  <img src="screenshots/linux-settings-general.jpg" alt="The Settings window on Ubuntu 24.04 (GNOME)" width="360">
+  <img src="screenshots/linux-flyout-expanded.jpg" alt="The flyout on Ubuntu 24.04 (GNOME), under the top bar" width="220">
+  <img src="screenshots/linux-settings-general.jpg" alt="The Settings window on Ubuntu 24.04 (GNOME)" width="330">
 </p>
 
 ## What was tested
@@ -14,11 +14,13 @@ sessions. The results are in [TESTING.md](TESTING.md) (Gate 11).
 | Setup | Result |
 |---|---|
 | Ubuntu 24.04, GNOME on **X11**, Dash to Panel (panel at the bottom) | Works. |
-| Ubuntu 24.04, GNOME on **X11**, stock top bar | Works. |
+| Ubuntu 24.04, GNOME on **X11**, stock top bar | Works. The flyout opens 12 px below the bar (re-checked with 1.1.0). |
 | Ubuntu 24.04, GNOME on **X11**, stock top bar + Ubuntu Dock fixed on the left | Works. |
 | Ubuntu 24.04, GNOME on **Wayland** | Works with the limitations below. The tray menu, Settings window and shortcut hint were not looked at on Wayland. |
 | `.deb` (installed with `apt`) and AppImage, GNOME on X11 | Both install or start and connect. The AppImage ran without installing any extra package. |
 | Other distributions, KDE, XFCE, Cinnamon, other tray hosts | **Untested** (no hardware); reports welcome. |
+
+The 1.1.0 build was run on GNOME on X11 with the `.deb`, once under Dash to Panel and once under the stock top bar.
 
 Works on all tested setups: connecting over BlueZ (HeyMelody service 079A, RFCOMM channel 15), `budsctl devices`, `sdp`
 and `status`, noise modes and ANC levels, EQ presets, low latency, gestures, find earbuds, shortcuts (X11), the shortcut
@@ -47,7 +49,9 @@ windows and from grabbing keys globally.
    The notification uses the standard desktop-notification D-Bus interface, so it should behave as on X11.
 
 Starting the app a second time opens the flyout on every session type, which makes a handy shortcut target:
-`BudsControl` (or the AppImage) bound to a key.
+`BudsControl` (or the AppImage) bound to a key. On X11 it opens next to the mouse pointer (the pointer's position,
+turned into a spot on the panel strip), so the position follows where the pointer is when the key is pressed.
+Clicking the tray icon and choosing **Open Buds Control** puts it under the tray icons, because the pointer is there.
 
 ## Known issues (all Linux sessions)
 
@@ -56,6 +60,10 @@ Starting the app a second time opens the flyout on every session type, which mak
   telling you why. EQ, low latency, gestures and find earbuds work with the buds out. *Planned:* show a message.
 - **Settings opens without focus on GNOME**, so GNOME shows a "Buds Control Settings is ready" notification and you have
   to click the window.
+- **The flyout is a rounded sheet in a transparent window.** Linux has nothing to blur, so the sheet is opaque (slate in
+  a dark theme, pale in a light one) and only its rounded corners are see-through; that needs a compositor, which every
+  current desktop runs. Without one the corners should come out black (not tried). The Settings window is a normal framed window and keeps
+  the plain dark or light page style.
 - **The flyout is a resizable window on Linux.** A non-resizable GTK window never shrinks below the largest size it has
   had, which broke collapsing the panel. It has no frame, so you cannot resize it with the mouse, but a tiling helper
   (for example Ubuntu's Tiling Assistant) may snap it.

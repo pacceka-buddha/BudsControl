@@ -459,14 +459,14 @@ dependencies = [
 
 [[package]]
 name = "buds-art"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "tiny-skia",
 ]
 
 [[package]]
 name = "buds-bt"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "block2",
  "bluer",
@@ -482,7 +482,7 @@ dependencies = [
 
 [[package]]
 name = "buds-core"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "buds-core",
  "chrono",
@@ -496,7 +496,7 @@ dependencies = [
 
 [[package]]
 name = "budscontrol"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "buds-art",
  "buds-bt",
@@ -517,7 +517,7 @@ dependencies = [
 
 [[package]]
 name = "budsctl"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "buds-bt",
  "buds-core",
@@ -2032,7 +2032,7 @@ dependencies = [
 
 [[package]]
 name = "icongen"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "tiny-skia",
 ]

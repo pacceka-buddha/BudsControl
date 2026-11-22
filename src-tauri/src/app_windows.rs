@@ -15,7 +15,7 @@ use crate::state::AppState;
 
 pub const FLYOUT: &str = "flyout";
 pub const SETTINGS: &str = "settings";
-pub const FLYOUT_WIDTH: f64 = 300.0;
+pub const FLYOUT_WIDTH: f64 = 272.0;
 pub const INITIAL_HEIGHT: f64 = 160.0;
 /// Space between the flyout and the screen edges / taskbar, in logical pixels.
 const MARGIN: f64 = 12.0;
@@ -23,14 +23,89 @@ const MIN_HEIGHT: f64 = 80.0;
 /// A tray click this soon after a blur-hide is the same click (see `FlyoutState`).
 const BLUR_CLICK_WINDOW: Duration = Duration::from_millis(300);
 
+/// Sets one of the window's DWM colours (a COLORREF, 0x00BBGGRR, or a special `DWMWA_COLOR_*`).
+/// Windows 10 doesn't know these attributes and returns an error, which is ignored.
+#[cfg(windows)]
+fn set_dwm_color(
+    window: &WebviewWindow,
+    attribute: windows::Win32::Graphics::Dwm::DWMWINDOWATTRIBUTE,
+    color: u32,
+) {
+    let Ok(hwnd) = window.hwnd() else { return };
+    // SAFETY: a documented attribute with a u32 value, on a window this process owns.
+    let _ = unsafe {
+        windows::Win32::Graphics::Dwm::DwmSetWindowAttribute(
+            hwnd,
+            attribute,
+            (&raw const color).cast(),
+            std::mem::size_of::<u32>() as u32,
+        )
+    };
+}
+
+/// Windows 11 draws a one-pixel border round the window, in the accent colour when "Show accent colour
+/// on title bars and window borders" is on. The flyout draws its own faint edge instead.
+#[cfg(windows)]
+fn remove_border(window: &WebviewWindow) {
+    use windows::Win32::Graphics::Dwm::{DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE};
+    set_dwm_color(window, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE);
+}
+
+/// Windows 11: for the borderless window's shadow, Tao keeps a one-pixel strip of title bar along the
+/// top, which Windows paints in the title bar colour (the accent colour, with "Show accent colour on
+/// title bars" on). The page works out the colour of its glass along that edge and passes it here
+/// (0x00BBGGRR), so the strip reads as the glass's lit rim.
+pub fn set_flyout_edge(app: &AppHandle, color: u32) {
+    #[cfg(windows)]
+    if let Some(window) = flyout(app) {
+        set_dwm_color(
+            &window,
+            windows::Win32::Graphics::Dwm::DWMWA_CAPTION_COLOR,
+            color,
+        );
+    }
+    #[cfg(not(windows))]
+    let _ = (app, color);
+}
+
+/// Where the page draws the snapshot behind the flyout (see `backdrop.rs`), in logical pixels
+/// relative to the window.
+#[cfg(windows)]
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackdropInfo {
+    /// Matches `flyout_reveal`: the page reports when it has drawn this snapshot.
+    pub generation: u64,
+    /// The snapshot's size in samples.
+    pub width: usize,
+    pub height: usize,
+    /// Where the snapshot's area lies, and its size.
+    pub left: f64,
+    pub top: f64,
+    pub bottom: f64,
+    pub css_width: f64,
+    pub css_height: f64,
+    /// The window grows upwards (its bottom edge stays put), so the page keeps the snapshot pinned to
+    /// the bottom edge; otherwise to the top.
+    pub pin_bottom: bool,
+}
+
+/// Extra snapshot on each side of the flyout, so the blur doesn't fade at the window's edges.
+#[cfg(windows)]
+const BACKDROP_PAD: f64 = 64.0;
+/// How long the page gets to draw a new snapshot before the flyout opens anyway.
+#[cfg(windows)]
+const REVEAL_TIMEOUT: Duration = Duration::from_millis(250);
+
 /// Creates the flyout window, hidden. Hides itself when it loses focus.
 pub fn create_flyout(app: &AppHandle) -> tauri::Result<()> {
     let builder = WebviewWindowBuilder::new(app, FLYOUT, WebviewUrl::App("flyout.html".into()))
         .title("Buds Control")
         .inner_size(FLYOUT_WIDTH, INITIAL_HEIGHT)
         .decorations(false)
-        // Linux has no window effects and a transparent window needs a compositor: solid there.
-        .transparent(cfg!(not(target_os = "linux")))
+        // Linux has no window effects, so the page draws its own opaque, rounded sheet in the
+        // transparent window (only the corners need a compositor, which every current desktop has).
+        .transparent(true)
         .shadow(true)
         .always_on_top(true)
         .skip_taskbar(true)
@@ -41,19 +116,19 @@ pub fn create_flyout(app: &AppHandle) -> tauri::Result<()> {
         .minimizable(false)
         .visible(false)
         .focused(false);
-    #[cfg(windows)]
-    let builder = builder.effects(EffectsBuilder::new().effect(Effect::Acrylic).build());
     // macOS: the system popover material behind the translucent page, with rounded corners.
     #[cfg(target_os = "macos")]
     let builder = builder
         .effects(
             EffectsBuilder::new()
                 .effect(Effect::Popover)
-                .radius(10.0)
+                .radius(16.0)
                 .build(),
         )
         .visible_on_all_workspaces(true);
     let window = builder.build()?;
+    #[cfg(windows)]
+    remove_border(&window);
 
     let handle = app.clone();
     window.on_window_event(move |event| match event {
@@ -78,6 +153,8 @@ fn flyout(app: &AppHandle) -> Option<WebviewWindow> {
 
 pub fn hide_flyout(app: &AppHandle, by_blur: bool) {
     let Some(window) = flyout(app) else { return };
+    // A show still waiting for its snapshot is called off.
+    app.state::<AppState>().flyout.lock().unwrap().generation += 1;
     if !window.is_visible().unwrap_or(false) {
         return;
     }
@@ -174,7 +251,67 @@ pub fn show_flyout(app: &AppHandle, icon: Option<tauri::Rect>) {
         f.scale = scale;
         f.height
     };
-    apply_geometry(&window, anchor, work, scale, height);
+    let placed = apply_geometry(&window, anchor, work, scale, height);
+    let generation = {
+        let mut f = state.flyout.lock().unwrap();
+        f.generation += 1;
+        f.generation
+    };
+
+    // Windows: snapshot what the flyout will cover, let the page draw it, then show the window (or
+    // show it anyway if the page is slow).
+    #[cfg(windows)]
+    if let Some(m) = &monitor {
+        let (p, s) = (m.position(), m.size());
+        let screen = Rect::new(p.x, p.y, s.width as i32, s.height as i32);
+        let pad = (BACKDROP_PAD * scale).round() as i32;
+        let left = (placed.x - pad).max(screen.x);
+        let right = (placed.right() + pad).min(screen.right());
+        let area = Rect::new(left, screen.y, right - left, screen.h);
+        // Without a snapshot (the copy failed) the page falls back to a solid surface.
+        let shot = crate::backdrop::capture(area, scale);
+        let taller = positioning::place_at(
+            anchor,
+            work,
+            (placed.w, placed.h + 40),
+            (MARGIN * scale).round() as i32,
+        );
+        let info = BackdropInfo {
+            generation,
+            width: shot.as_ref().map_or(0, |s| s.width),
+            height: shot.as_ref().map_or(0, |s| s.height),
+            left: f64::from(area.x - placed.x) / scale,
+            top: f64::from(area.y - placed.y) / scale,
+            bottom: f64::from(placed.bottom() - area.bottom()) / scale,
+            css_width: f64::from(area.w) / scale,
+            css_height: f64::from(area.h) / scale,
+            pin_bottom: taller.1 != placed.y,
+        };
+        state.flyout.lock().unwrap().backdrop = shot.map(|s| s.rgba).unwrap_or_default();
+        let _ = window.emit("flyout-backdrop", info);
+        let app = app.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(REVEAL_TIMEOUT);
+            reveal_flyout(&app, generation);
+        });
+        return;
+    }
+    #[cfg(not(windows))]
+    let _ = placed;
+    reveal_flyout(app, generation);
+}
+
+/// Shows the flyout prepared by `show_flyout`, unless a later show or a hide has replaced it.
+pub fn reveal_flyout(app: &AppHandle, generation: u64) {
+    let Some(window) = flyout(app) else { return };
+    {
+        let state = app.state::<AppState>();
+        let mut f = state.flyout.lock().unwrap();
+        if f.generation != generation || f.revealed == generation {
+            return;
+        }
+        f.revealed = generation;
+    }
     let _ = window.show();
     let _ = window.set_focus();
     let _ = window.emit("flyout-shown", ());
@@ -201,11 +338,18 @@ pub fn resize_flyout(app: &AppHandle, requested: f64) {
     }
 }
 
-/// Sizes and positions the window (physical pixels, so mixed-DPI monitors behave).
-fn apply_geometry(window: &WebviewWindow, anchor: Anchor, work: Rect, scale: f64, height: f64) {
+/// Sizes and positions the window (physical pixels, so mixed-DPI monitors behave). Returns where it put it.
+fn apply_geometry(
+    window: &WebviewWindow,
+    anchor: Anchor,
+    work: Rect,
+    scale: f64,
+    height: f64,
+) -> Rect {
     let size = (
         (FLYOUT_WIDTH * scale).round() as i32,
-        (height * scale).round() as i32,
+        // Up, so a fractional scale never leaves the page a pixel short (which shows a scrollbar).
+        (height * scale).ceil() as i32,
     );
     let (x, y) = positioning::place_at(anchor, work, size, (MARGIN * scale).round() as i32);
     let _ = window.set_size(PhysicalSize::new(size.0 as u32, size.1 as u32));
@@ -220,6 +364,7 @@ fn apply_geometry(window: &WebviewWindow, anchor: Anchor, work: Rect, scale: f64
             let _ = window.set_position(PhysicalPosition::new(x, y));
         });
     }
+    Rect::new(x, y, size.0, size.1)
 }
 
 /// A Wayland session (also when the app itself runs through Xwayland).

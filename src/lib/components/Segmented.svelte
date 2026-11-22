@@ -1,9 +1,11 @@
 <script lang="ts" generics="T extends { id: string; label: string }">
-  // A segmented control: one accent pill slides to the selected segment.
+  // A segmented control, after the original macOS app: one frosted pill that follows the selected
+  // segment on a spring, lifts and stretches as it moves, then settles, while the newly selected
+  // label swells a little.
   //   variant "expand": unselected segments are icon-only squares, the selected one grows to show its label
   //   variant "even":   segments share the width (or size to their labels with `fit`)
   // Radio-group semantics: arrow keys move the selection, Home / End jump, only one tab stop.
-  import type { Snippet } from 'svelte'
+  import { untrack, type Snippet } from 'svelte'
 
   interface Props {
     items: T[]
@@ -17,10 +19,12 @@
     /** "even": size segments to their labels instead of equal widths. */
     fit?: boolean
   }
+
   let { items, selected, onselect, label, segment, variant = 'even', height = 30, fit = false }: Props = $props()
 
   let group: HTMLElement | undefined = $state()
   let pill: HTMLElement | undefined = $state()
+  let blob: HTMLElement | undefined = $state()
   let buttons: (HTMLElement | undefined)[] = $state([])
   let ready = $state(false)
 
@@ -28,41 +32,151 @@
   // Roving tab stop: the selected segment, or the first when nothing is selected.
   const tabStop = $derived(selectedIndex >= 0 ? selectedIndex : 0)
 
-  function place() {
+  const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  // The pill's position and width, each a spring (value and velocity) chasing the selected segment.
+  const x = { at: 0, v: 0 }
+  const w = { at: 0, v: 0 }
+  // Response ~0.42 s with a little overshoot, like the original's spring.
+  const STIFFNESS = 340
+  const DAMPING = 24
+
+  function step(s: { at: number; v: number }, target: number, dt: number) {
+    s.v += (-STIFFNESS * (s.at - target) - DAMPING * s.v) * dt
+    s.at += s.v * dt
+  }
+
+  function target(): { x: number; w: number } | null {
     const el = selectedIndex >= 0 ? buttons[selectedIndex] : undefined
-    if (!pill || !el) {
+    return el && el.offsetWidth > 0 ? { x: el.offsetLeft, w: el.offsetWidth } : null
+  }
+
+  function draw() {
+    if (!pill) return
+    pill.style.transform = `translateX(${x.at}px)`
+    pill.style.width = `${w.at}px`
+  }
+
+  function snap() {
+    const t = target()
+    if (!t) {
       ready = false
       return
     }
-    pill.style.transform = `translate(${el.offsetLeft}px, ${el.offsetTop}px)`
-    pill.style.width = `${el.offsetWidth}px`
-    pill.style.height = `${el.offsetHeight}px`
+    x.at = t.x
+    w.at = t.w
+    x.v = w.v = 0
+    draw()
     ready = true
   }
 
-  // Segments change width while they animate, so the pill follows them frame by frame.
+  // Segments change width while they animate, so the target is measured again every frame.
   let frame = 0
+  let until = 0
+  let last = 0
+  // A spring flight is running (the pill is moving on its own, so the layout must not snap it).
+  let springing = false
+  // The loop that keeps the pill on its segment while the layout settles.
+  let followFrame = 0
+
+  /** Snaps the pill to its segment every frame for `ms`: the layout (a segment growing on a transition)
+   *  keeps moving after the selection changes, and a hidden window gets no frames until it is shown. */
   function follow(ms: number) {
-    cancelAnimationFrame(frame)
+    cancelAnimationFrame(followFrame)
     const end = performance.now() + ms
-    const step = () => {
-      place()
-      if (performance.now() < end) frame = requestAnimationFrame(step)
+    const tick = () => {
+      if (!springing) snap()
+      followFrame = performance.now() < end ? requestAnimationFrame(tick) : 0
     }
-    step()
+    followFrame = requestAnimationFrame(tick)
   }
 
+  const settleMs = () => (variant === 'expand' ? 600 : 80)
+
+  function animate(now: number) {
+    const t = target()
+    if (t) {
+      // Real elapsed time, capped so a stalled frame doesn't fling the pill.
+      const dt = Math.min((now - last) / 1000, 1 / 30)
+      step(x, t.x, dt)
+      step(w, t.w, dt)
+      draw()
+    }
+    last = now
+    if (now < until) frame = requestAnimationFrame(animate)
+    else {
+      frame = 0
+      springing = false
+      snap()
+      follow(settleMs())
+    }
+  }
+
+  function restart(el: Element | undefined, cls: string) {
+    if (!el) return
+    el.classList.remove(cls)
+    void (el as HTMLElement).offsetWidth
+    el.classList.add(cls)
+  }
+
+  let previous: string | null = null
   $effect(() => {
-    void selected
     void items.length
-    follow(variant === 'expand' ? 420 : 60)
-    return () => cancelAnimationFrame(frame)
+    const changed = previous !== null && selected !== previous
+    previous = selected
+    if (!changed || !untrack(() => ready) || reducedMotion()) {
+      // First show, a list change or reduced motion: no flight, just follow the layout settling.
+      cancelAnimationFrame(frame)
+      frame = 0
+      springing = false
+      snap()
+      follow(settleMs())
+      return () => {
+        cancelAnimationFrame(followFrame)
+        followFrame = 0
+      }
+    }
+    restart(blob, 'bubble')
+    restart(buttons[selectedIndex], 'swell')
+    until = performance.now() + 800
+    last = performance.now()
+    cancelAnimationFrame(frame)
+    cancelAnimationFrame(followFrame)
+    springing = true
+    frame = requestAnimationFrame(animate)
+    return () => {
+      cancelAnimationFrame(frame)
+      frame = 0
+      springing = false
+    }
   })
 
+  // A window that was hidden when the selection changed gets its frames, and its transitions, only
+  // once it is shown again: keep the pill on its segment while that catches up.
+  function shown() {
+    if (!document.hidden) follow(settleMs() + 400)
+  }
+  $effect(() => {
+    document.addEventListener('visibilitychange', shown)
+    window.addEventListener('focus', shown)
+    return () => {
+      document.removeEventListener('visibilitychange', shown)
+      window.removeEventListener('focus', shown)
+      cancelAnimationFrame(followFrame)
+    }
+  })
+
+  // The pill follows the layout whenever it settles on its own: the group resizing, or a segment
+  // changing width (the "expand" variant grows the selected one on a transition). A change made while
+  // the window was hidden gets no animation frames, so the pill is measured when the transition has
+  // only just started; it must be measured again as the segments reach their final widths.
   $effect(() => {
     if (!group) return
-    const observer = new ResizeObserver(() => place())
+    const observer = new ResizeObserver(() => {
+      if (!springing) snap()
+    })
     observer.observe(group)
+    for (const button of buttons) if (button) observer.observe(button)
     return () => observer.disconnect()
   })
 
@@ -105,7 +219,7 @@
   onkeydown={key}
   style:--h="{height}px"
 >
-  <span class="pill" class:ready bind:this={pill} aria-hidden="true"></span>
+  <span class="pill" class:ready bind:this={pill} aria-hidden="true"><span class="blob" bind:this={blob}></span></span>
   {#each items as item, i (item.id)}
     {@const on = item.id === selected}
     <button
@@ -120,7 +234,7 @@
       bind:this={buttons[i]}
       onclick={() => !on && onselect(item.id)}
     >
-      {@render segment(item, on)}
+      <span class="content">{@render segment(item, on)}</span>
     </button>
   {/each}
 </div>
@@ -131,21 +245,42 @@
     display: flex;
     padding: 3px;
     background: var(--track);
-    border: 1px solid var(--stroke);
+    box-shadow: inset 0 0 0 0.5px rgba(127, 127, 127, 0.16);
     border-radius: var(--radius-pill);
   }
   .pill {
     position: absolute;
     left: 0;
-    top: 0;
-    border-radius: var(--radius-pill);
-    background: var(--accent);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    top: 3px;
+    height: var(--h);
     opacity: 0;
     pointer-events: none;
   }
   .pill.ready {
     opacity: 1;
+  }
+  .blob {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-pill);
+    background: var(--sel);
+    box-shadow:
+      inset 0 0.75px 0 var(--sel-hi),
+      0 1px 2px rgba(0, 0, 0, 0.15);
+  }
+  /* Lifts and stretches, then settles. */
+  .blob:global(.bubble) {
+    animation: bubble 620ms cubic-bezier(0.3, 0.7, 0.3, 1);
+  }
+  @keyframes bubble {
+    22% {
+      transform: scale(1.08, 1.3);
+      filter: brightness(1.18);
+      box-shadow:
+        inset 0 0.75px 0 var(--sel-hi),
+        0 3px 7px rgba(0, 0, 0, 0.32);
+    }
   }
   .item {
     position: relative;
@@ -153,11 +288,10 @@
     flex: 1 1 0;
     min-width: 0;
     height: var(--h);
-    padding: 0 8px;
+    padding: 0 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
     border: 0;
     border-radius: var(--radius-pill);
     background: transparent;
@@ -167,14 +301,30 @@
     transition:
       background-color 120ms,
       color 160ms,
-      flex-grow var(--dur) var(--ease-spring);
+      flex-grow 420ms var(--ease-spring);
   }
   .item:hover:not(.on) {
     background: var(--fill-hover);
   }
   .item.on {
-    color: var(--on-accent);
+    color: var(--text);
     font-weight: 600;
+  }
+  .content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 0;
+  }
+  /* The newly selected label swells as if seen through the bubble. */
+  .item:global(.swell) .content {
+    animation: swell 500ms cubic-bezier(0.3, 0.7, 0.3, 1);
+  }
+  @keyframes swell {
+    25% {
+      transform: scale(1.12);
+    }
   }
   /* expand: the unselected modes are icon-only squares, the selected one takes the rest. */
   .expand .item {
@@ -185,5 +335,11 @@
   }
   .fit .item {
     flex: 1 1 auto;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blob:global(.bubble),
+    .item:global(.swell) .content {
+      animation: none;
+    }
   }
 </style>

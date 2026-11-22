@@ -5,6 +5,42 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Linux: the flyout is a rounded sheet in soft slate (a pale one with a light theme) with rounded cards, drawn in a
+  transparent window, instead of a flat black rectangle. Only the corners need a compositor, which current desktops have.
+- macOS: a glassier flyout. The page adds only a faint tint over the system's blur, the cards are brighter at the top,
+  the selection pill is brighter, a lit rim runs round the window, and the corners are rounder (16 px).
+
+### Fixed
+
+- The selection pill of the mode switch (and the other segmented controls) could stay narrow and off to one side when
+  the selection changed while the flyout was hidden, for example a mode change made on the buds or with `budsctl`. The
+  pill now follows its segment until the layout has settled, and again whenever the flyout is shown.
+- On Linux and macOS the flyout could open with empty space below the last card (about 200 px). The web view kept a
+  stale height for the expanding "more controls" panel when its content shrank, and the window followed it. The panel
+  now animates to its measured height instead of using a `0fr` to `1fr` grid row.
+
+## [1.1.0] - 2026-11-19
+
+### Changed
+
+- New app icon: two earbuds inside a split battery ring on a graphite tile.
+- The tray icon's ring is split in two: the left half shows the left bud's battery and the right half the right
+  bud's, so you can see when one runs down faster.
+- Restyled flyout: frosted glass on Windows (a blurred copy of what is behind it, taken as it opens, so it looks
+  the same with transparency effects off and over Remote Desktop or AnyDesk), no accent-coloured window border,
+  borderless cards, a springy pill on the mode and preset
+  switches, smaller switches and capsule buttons, and plain-text menus for gestures. The flyout is 272 px wide. The
+  header and the Settings window show the same split battery ring as the tray icon.
+
+### Fixed
+
+- The equalizer chose between preset buttons and a menu from an estimate of the text width taken before the page had
+  measured it, and never checked again. It now decides from the real widths.
+- At display scales such as 125%, the flyout could come out a fraction of a pixel too short and show a scrollbar
+  (seen on the "not connected" panel). Its height is now rounded up.
+
 ## [1.0.0] - 2026-11-18
 
 First public release.

@@ -217,6 +217,24 @@ pub fn flyout_resize(app: AppHandle, height: f64) {
     app_windows::resize_flyout(&app, height);
 }
 
+/// The snapshot behind the flyout as raw RGBA (empty when there is none); see `flyout-backdrop`.
+#[tauri::command]
+pub fn flyout_backdrop(state: State<AppState>) -> tauri::ipc::Response {
+    tauri::ipc::Response::new(state.flyout.lock().unwrap().backdrop.clone())
+}
+
+/// The colour of the flyout's top edge, 0x00BBGGRR (see `set_flyout_edge`).
+#[tauri::command]
+pub fn flyout_edge(app: AppHandle, color: u32) {
+    app_windows::set_flyout_edge(&app, color);
+}
+
+/// The page has drawn the snapshot of show `generation`: open the flyout.
+#[tauri::command]
+pub fn flyout_reveal(app: AppHandle, generation: u64) {
+    app_windows::reveal_flyout(&app, generation);
+}
+
 #[tauri::command]
 pub fn flyout_hide(app: AppHandle) {
     app_windows::hide_flyout(&app, false);

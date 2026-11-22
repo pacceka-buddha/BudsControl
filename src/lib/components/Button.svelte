@@ -49,4 +49,28 @@
     background: var(--danger);
     filter: brightness(1.1);
   }
+
+  /* The flyout: a glass capsule. */
+  :global(html.glass) button {
+    min-height: 24px;
+    padding: 3px 13px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--fill);
+    box-shadow:
+      inset 0 0.5px 0 var(--sel-hi),
+      0 1px 2px rgba(0, 0, 0, 0.14);
+    font-size: 11.5px;
+    font-weight: 600;
+    transition: filter 120ms;
+  }
+  :global(html.glass) button:hover:not(:disabled) {
+    background: var(--fill);
+    filter: brightness(1.12);
+  }
+  :global(html.glass) .danger,
+  :global(html.glass) .danger:hover:not(:disabled) {
+    background: rgba(255, 69, 58, 0.88);
+    color: #fff;
+  }
 </style>

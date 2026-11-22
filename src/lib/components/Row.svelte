@@ -13,7 +13,7 @@
 </script>
 
 <div class="row">
-  <span class="icon"><Icon name={icon} size={18} /></span>
+  <span class="icon"><Icon name={icon} size={16} /></span>
   <div class="text">
     <div class="title">{title}</div>
     <div class="sub">{subtitle}</div>
@@ -39,7 +39,7 @@
     min-width: 0;
   }
   .title {
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 600;
   }
   .sub {

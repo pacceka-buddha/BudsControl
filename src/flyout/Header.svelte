@@ -15,7 +15,6 @@
   let { snapshot, expanded, ontoggle }: Props = $props()
 
   const connected = $derived(snapshot.link === 'connected')
-  const charging = $derived(snapshot.left?.charging === true || snapshot.right?.charging === true)
   let menuButton: HTMLButtonElement | undefined = $state()
 
   async function openMenu() {
@@ -36,7 +35,7 @@
 </script>
 
 <header>
-  <BatteryRing level={connected ? snapshot.budsBattery : null} {charging} size={34} />
+  <BatteryRing left={connected ? snapshot.left : null} right={connected ? snapshot.right : null} size={34} />
   <div class="text">
     <div class="name">{snapshot.deviceName}</div>
     <div class="sub">{subtitle(snapshot)}</div>
@@ -53,7 +52,7 @@
         title={expanded ? 'Fewer controls' : 'Equalizer, low latency, find earbuds and gestures'}
         onclick={ontoggle}
       >
-        <Icon name="chevronDown" size={14} />
+        <Icon name="chevronDown" size={12} />
       </button>
     {/if}
     <button type="button" class="round" bind:this={menuButton} aria-label="More options" aria-haspopup="menu" title="Settings, reconnect, quit" onclick={openMenu}>
@@ -73,14 +72,14 @@
     min-width: 0;
   }
   .name {
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .sub {
-    font-size: 12px;
+    font-size: 11.5px;
     color: var(--text-2);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -93,20 +92,23 @@
   .round {
     display: grid;
     place-items: center;
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
     padding: 0;
-    border: 1px solid var(--stroke);
+    border: 0;
     border-radius: 50%;
     background: var(--fill);
+    box-shadow:
+      inset 0 0.5px 0 var(--sel-hi),
+      0 1px 2px rgba(0, 0, 0, 0.12);
     color: var(--text-2);
-    transition: background-color 120ms;
+    transition: filter 120ms;
   }
   .round:hover {
-    background: var(--fill-hover);
+    filter: brightness(1.15);
   }
   .round:active {
-    background: var(--fill-press);
+    filter: brightness(0.92);
   }
   .round :global(svg) {
     transition: transform var(--dur) var(--ease-out);
